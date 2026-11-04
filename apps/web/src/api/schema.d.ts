@@ -147,6 +147,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/files/avatars/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serve an uploaded avatar
+         * @description Serves only files this API generated (name = 32 hex chars + .jpg|.png). `avatarUrl` values point here (D2).
+         */
+        get: operations["getAvatarFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tutors": {
         parameters: {
             query?: never;
@@ -1490,6 +1510,30 @@ export interface operations {
                     "application/json": components["schemas"]["Subject"][];
                 };
             };
+        };
+    };
+    getAvatarFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     searchTutors: {
