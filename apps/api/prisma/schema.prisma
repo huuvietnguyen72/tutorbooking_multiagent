@@ -183,6 +183,8 @@ model Booking {
   cancelledAt     DateTime?     @map("cancelled_at") @db.Timestamptz(3)
   cancelledBy     String?       @map("cancelled_by") @db.Uuid
   cancelReason    String?       @map("cancel_reason")
+  /// Client-supplied `Idempotency-Key` of POST /bookings; partial unique (student_id, key) lives in SQL.
+  idempotencyKey  String?       @map("idempotency_key") @db.VarChar(64)
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 

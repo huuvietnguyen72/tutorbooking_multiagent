@@ -27,6 +27,15 @@ const envSchema = z
     MIN_BOOKING_LEAD_MINUTES: z.coerce.number().int().min(0).max(1440).default(60),
     DISPLAY_TIMEZONE: z.string().min(1).default('Asia/Ho_Chi_Minh'),
     UPLOAD_DIR: z.string().min(1).default('./uploads'),
+    BOOKING_HOLD_MINUTES: z.coerce.number().int().min(1).max(120).default(15),
+    CANCELLATION_WINDOW_HOURS: z.coerce.number().int().min(0).max(168).default(24),
+    /** 0 disables the in-process timer (tests call the job directly). */
+    EXPIRY_JOB_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(30),
+    PAYMENT_PROVIDER: z.enum(['mock', 'vnpay']).default('mock'),
+    /** Off by default in production (B1); compose demo opts in through .env. */
+    MOCK_GATEWAY_ENABLED: z.enum(['true', 'false']).optional(),
+    /** Where the mock gateway POSTs its signed webhook; never derived from the request Host (B5). */
+    INTERNAL_WEBHOOK_BASE_URL: z.string().url().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.JWT_SECRET === env.PAYMENT_WEBHOOK_SECRET) {
@@ -36,7 +45,12 @@ const envSchema = z
         message: 'PAYMENT_WEBHOOK_SECRET must differ from JWT_SECRET',
       });
     }
-  });
+  })
+  .transform((env) => ({
+    ...env,
+    MOCK_GATEWAY_ENABLED: (env.MOCK_GATEWAY_ENABLED ?? (env.NODE_ENV === 'production' ? 'false' : 'true')) === 'true',
+    INTERNAL_WEBHOOK_BASE_URL: (env.INTERNAL_WEBHOOK_BASE_URL ?? `http://127.0.0.1:${env.PORT}`).replace(/\/+$/, ''),
+  }));
 
 export type Env = z.infer<typeof envSchema>;
 
