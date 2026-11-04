@@ -1,0 +1,4 @@
+body { margin: 0; }
+@media (max-width: 575px) {
+  .hide-on-mobile { display: none; }
+}
