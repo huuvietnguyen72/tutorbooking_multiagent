@@ -56,6 +56,8 @@ jobs:
         run: |
           npm run gen:api --workspace @tutor/web
           git diff --exit-code apps/web/src/api/schema.d.ts
+      - name: Generate Prisma client (needed by API tests)
+        run: npm run prisma:generate --workspace @tutor/api
       - run: npm test
 
   build:
