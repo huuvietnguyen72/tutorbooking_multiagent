@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    name: Test (PostgreSQL 16)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16.6-alpine
+        env:
+          POSTGRES_USER: tutor
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tutor_booking_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tutor -d tutor_booking_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://tutor:postgres@127.0.0.1:5432/tutor_booking_test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+          cache: npm
+      - run: npm ci
+      - name: API client is up to date with docs/openapi.yaml
+        run: |
+          npm run gen:api --workspace @tutor/web
+          git diff --exit-code apps/web/src/api/schema.d.ts
+      - run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  compose:
+    name: Compose config
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose.yml
+        run: |
+          cp .env.example .env
+          sed -i \
+            -e 's/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=ci-only-postgres/' \
+            -e 's/^JWT_SECRET=$/JWT_SECRET=ci-only-jwt-secret-000000000000000000/' \
+            -e 's/^PAYMENT_WEBHOOK_SECRET=$/PAYMENT_WEBHOOK_SECRET=ci-only-webhook-secret-0000000000000/' \
+            -e 's/^SEED_ADMIN_PASSWORD=$/SEED_ADMIN_PASSWORD=ci-only-admin-password/' \
+            .env
+          docker compose config --quiet
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  audit:
+    name: npm audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high

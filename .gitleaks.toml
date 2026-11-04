@@ -1,0 +1,12 @@
+title = "gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Repository allowlist for non-secret placeholders and CI-only values"
+paths = [
+  '''^\.env\.example$''',
+  '''^\.github/workflows/ci\.yml$''',
+  '''^scripts/init-env\.sh$''',
+]

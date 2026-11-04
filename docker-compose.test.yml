@@ -1,0 +1,11 @@
+# CI-only compose override. Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
+services:
+  db:
+    environment:
+      POSTGRES_DB: tutor_booking_test
+
+  api:
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tutor}:${POSTGRES_PASSWORD}@db:5432/tutor_booking_test?schema=public

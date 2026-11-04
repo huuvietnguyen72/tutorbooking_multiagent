@@ -1,0 +1,1130 @@
+openapi: 3.1.0
+info:
+  title: Tutor Booking API
+  version: 0.3.0
+  description: |
+    MVP Web Tutor Booking Management (QUA-6 / P2b). Rev 3 — aligned with P2a design v1.2 and Security early review (QUA-9); submitted for CEO approval.
+    - All timestamps are ISO-8601 in UTC (`Z`); requests without an offset are rejected.
+    - Money is integer VND.
+    - Errors: `{error:{code,message,details}}`; UI maps `code` to i18n text and never shows `message`.
+    - JSON fields are camelCase.
+    - Auth: httpOnly cookie `tb_session` (JWT). Write requests must be `application/json` and same-origin.
+    - Response DTOs are role-specific allow-lists (StudentBooking=Booking, TutorBooking, AdminBookingDetail, PublicReview).
+    - Accounts with mustChangePassword get 403 PASSWORD_CHANGE_REQUIRED on everything except /me, /me/password, /auth/logout.
+    - Ownership: student/tutor resources are always scoped to the caller; foreign IDs return 404.
+    - `x-roles` lists roles allowed on each operation (`PUBLIC` = no login).
+servers:
+  - url: /api/v1
+tags:
+  - name: auth
+  - name: public
+  - name: tutor
+  - name: student
+  - name: payments
+  - name: admin
+  - name: system
+
+security:
+  - cookieAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      operationId: health
+      summary: Health
+      security: []
+      x-roles: [PUBLIC]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { status: { type: string, const: ok } } } } } }
+
+  /config/public:
+    get:
+      tags: [system]
+      operationId: getPublicConfig
+      summary: Get public config
+      security: []
+      x-roles: [PUBLIC]
+      responses:
+        '200':
+          description: Business constants for UI text ({N}) and countdowns
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cancellationWindowHours, holdMinutes, slotDurationMinutes, minBookingLeadMinutes, timezone, mockGatewayEnabled]
+                properties:
+                  cancellationWindowHours: { type: integer, examples: [24] }
+                  holdMinutes: { type: integer, examples: [15] }
+                  slotDurationMinutes: { type: integer, examples: [60] }
+                  minBookingLeadMinutes: { type: integer, examples: [60] }
+                  timezone: { type: string, examples: [Asia/Ho_Chi_Minh] }
+                  mockGatewayEnabled: { type: boolean }
+
+  # ---------------- auth ----------------
+  /auth/register:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Register
+      security: []
+      x-roles: [PUBLIC]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RegisterRequest' } } }
+      responses:
+        '201': { description: Created (STUDENT active; TUTOR in PENDING_APPROVAL), content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Login
+      security: []
+      x-roles: [PUBLIC]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LoginRequest' } } }
+      responses:
+        '200':
+          description: Logged in; sets `tb_session` cookie
+          headers: { Set-Cookie: { schema: { type: string } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } }
+        '401': { description: INVALID_CREDENTIALS (generic message), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '403': { description: ACCOUNT_LOCKED (only after correct password), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Logout
+      x-roles: [STUDENT, TUTOR, ADMIN]
+      description: Clears cookie and increments token_version (logs out all devices).
+      responses:
+        '204': { description: 'Cookie cleared, sessions revoked' }
+  /me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: Get me
+      x-roles: [STUDENT, TUTOR, ADMIN]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [auth]
+      operationId: updateMe
+      summary: Update me
+      x-roles: [STUDENT, TUTOR, ADMIN]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [fullName], properties: { fullName: { type: string, minLength: 1, maxLength: 100 } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+  /me/password:
+    post:
+      tags: [auth]
+      operationId: changePassword
+      summary: Change password
+      x-roles: [STUDENT, TUTOR, ADMIN]
+      description: Increments token_version (other sessions invalidated) and re-issues cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '204': { description: Changed }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '403': { description: WRONG_CURRENT_PASSWORD, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  # ---------------- public ----------------
+  /subjects:
+    get:
+      tags: [public]
+      operationId: listSubjects
+      summary: List subjects
+      security: []
+      x-roles: [PUBLIC]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Subject' } } } } }
+  /files/avatars/{name}:
+    get:
+      tags: [public]
+      operationId: getAvatarFile
+      summary: Serve an uploaded avatar
+      security: []
+      x-roles: [PUBLIC]
+      description: "Serves only files this API generated (name = 32 hex chars + .jpg|.png). `avatarUrl` values point here (D2)."
+      parameters:
+        - { name: name, in: path, required: true, schema: { type: string, pattern: '^[a-f0-9]{32}\.(jpg|png)$' } }
+      responses:
+        '200': { description: Image, content: { image/png: { schema: { type: string, format: binary } }, image/jpeg: { schema: { type: string, format: binary } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tutors:
+    get:
+      tags: [public]
+      operationId: searchTutors
+      summary: Search tutors
+      security: []
+      x-roles: [PUBLIC]
+      description: Only APPROVED tutors. All filters are ANDed.
+      parameters:
+        - { name: subjectId, in: query, schema: { type: integer } }
+        - { name: minPrice, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: maxPrice, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: minRating, in: query, schema: { type: number, minimum: 1, maximum: 5 }, description: 'advanced filter (cuttable)' }
+        - { name: availableDate, in: query, schema: { type: string, format: date }, description: 'YYYY-MM-DD in DISPLAY_TIMEZONE; tutor has >=1 bookable slot that day (advanced filter, cuttable)' }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 }, description: name contains }
+        - { name: sort, in: query, schema: { type: string, enum: [rating_desc, price_asc, price_desc], default: rating_desc } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorSummaryPage' } } } }
+  /slots/{slotId}:
+    get:
+      tags: [public]
+      operationId: getSlot
+      summary: Get slot
+      security: []
+      x-roles: [PUBLIC]
+      description: Slot + tutor + current price for the booking confirmation page (S-06). 404 if tutor not APPROVED or slot closed/deleted.
+      parameters: [ { $ref: '#/components/parameters/SlotId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SlotDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tutors/{tutorId}:
+    get:
+      tags: [public]
+      operationId: getTutor
+      summary: Get tutor
+      security: []
+      x-roles: [PUBLIC]
+      parameters: [ { $ref: '#/components/parameters/TutorId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorPublic' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tutors/{tutorId}/slots:
+    get:
+      tags: [public]
+      operationId: listTutorSlots
+      summary: List tutor slots
+      security: []
+      x-roles: [PUBLIC]
+      description: Future non-closed slots of an APPROVED tutor with public status AVAILABLE/UNAVAILABLE. Max range 31 days. Used by S-03 and S-13.
+      parameters:
+        - { $ref: '#/components/parameters/TutorId' }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PublicSlot' } } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tutors/{tutorId}/reviews:
+    get:
+      tags: [public]
+      operationId: listTutorReviews
+      summary: List tutor reviews
+      security: []
+      x-roles: [PUBLIC]
+      parameters:
+        - { $ref: '#/components/parameters/TutorId' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PublicReviewPage' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------- tutor (self) ----------------
+  /tutor/profile:
+    get:
+      tags: [tutor]
+      operationId: getMyTutorProfile
+      summary: Get my tutor profile
+      x-roles: [TUTOR]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorOwnProfile' } } } }
+    put:
+      tags: [tutor]
+      operationId: updateMyTutorProfile
+      summary: Update my tutor profile
+      x-roles: [TUTOR]
+      description: Price change applies only to bookings created afterwards. Does not change approval status (A5).
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TutorProfileInput' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorOwnProfile' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+  /tutor/profile/avatar:
+    put:
+      tags: [tutor]
+      operationId: uploadAvatar
+      summary: Upload avatar
+      x-roles: [TUTOR]
+      description: JPG/PNG <= 2 MB, checked by magic bytes, stored under a random name behind StorageService. Cuttable (fallback initials).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { type: object, required: [file], properties: { file: { type: string, format: binary } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorOwnProfile' } } } }
+        '413': { description: FILE_TOO_LARGE, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '415': { description: UNSUPPORTED_FILE_TYPE, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /tutor/profile/submit:
+    post:
+      tags: [tutor]
+      operationId: resubmitTutorProfile
+      summary: Resubmit tutor profile
+      x-roles: [TUTOR]
+      description: REJECTED -> PENDING_APPROVAL. Other states -> 409 INVALID_STATE.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorOwnProfile' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /tutor/slots:
+    get:
+      tags: [tutor]
+      operationId: listMySlots
+      summary: List my slots
+      x-roles: [TUTOR]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TutorSlot' } } } } }
+    post:
+      tags: [tutor]
+      operationId: createSlots
+      summary: Create slots
+      x-roles: [TUTOR]
+      x-requires: tutor.approvalStatus == APPROVED
+      description: Creates one or more slots of SLOT_DURATION_MINUTES each. All-or-nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [startTimes]
+              properties:
+                startTimes: { type: array, minItems: 1, maxItems: 50, items: { type: string, format: date-time } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TutorSlot' } } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '403': { description: TUTOR_NOT_ACCEPTING, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '409': { description: SLOT_OVERLAP, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /tutor/slots/{slotId}/reopen:
+    post:
+      tags: [tutor]
+      operationId: reopenSlot
+      summary: Reopen slot
+      x-roles: [TUTOR]
+      description: CLOSED -> AVAILABLE (S-18). Must still be in the future and not overlap another active slot.
+      parameters: [ { $ref: '#/components/parameters/SlotId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorSlot' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'SLOT_OVERLAP | INVALID_STATE | SLOT_TOO_SOON', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /tutor/reviews:
+    get:
+      tags: [tutor]
+      operationId: listMyReviews
+      summary: List my reviews
+      x-roles: [TUTOR]
+      description: Reviews received by caller (S-23), any approval status. Student names abbreviated. Hidden reviews excluded.
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PublicReviewPage' } } } }
+  /tutor/slots/{slotId}:
+    patch:
+      tags: [tutor]
+      operationId: moveSlot
+      summary: Move slot
+      x-roles: [TUTOR]
+      description: Only AVAILABLE slots owned by caller. HELD/BOOKED -> 409 SLOT_LOCKED.
+      parameters: [ { $ref: '#/components/parameters/SlotId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [startAt], properties: { startAt: { type: string, format: date-time } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorSlot' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [tutor]
+      operationId: deleteSlot
+      summary: Delete slot
+      x-roles: [TUTOR]
+      description: AVAILABLE or CLOSED slots only. Soft delete (deleted_at) so old bookings keep their reference; frees the time range.
+      parameters: [ { $ref: '#/components/parameters/SlotId' } ]
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /tutor/bookings:
+    get:
+      tags: [tutor]
+      operationId: listMyTeachingBookings
+      summary: List my teaching bookings
+      x-roles: [TUTOR]
+      description: Caller's bookings only. PENDING_PAYMENT excluded (Q6 proposal).
+      parameters:
+        - { name: scope, in: query, schema: { type: string, enum: [upcoming, past, cancelled], default: upcoming } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorBookingPage' } } } }
+  /tutor/bookings/{bookingId}:
+    get:
+      tags: [tutor]
+      operationId: getMyTeachingBooking
+      summary: Get my teaching booking
+      x-roles: [TUTOR]
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorBooking' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tutor/bookings/{bookingId}/cancel:
+    post:
+      tags: [tutor]
+      operationId: tutorCancelBooking
+      summary: Tutor cancel booking
+      x-roles: [TUTOR]
+      description: CONFIRMED and now < startAt -> CANCELLED_BY_TUTOR, 100% refund, slot CLOSED.
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorBooking' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'NOT_CONFIRMED | SESSION_STARTED', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  # ---------------- student ----------------
+  /bookings:
+    post:
+      tags: [student]
+      operationId: createBooking
+      summary: Create booking
+      x-roles: [STUDENT]
+      description: |
+        Creates PENDING_PAYMENT booking holding the slot for BOOKING_HOLD_MINUTES and returns the checkout URL.
+        Price is copied from the tutor profile at this moment.
+      parameters:
+        - { name: Idempotency-Key, in: header, required: false, schema: { type: string, maxLength: 64 }, description: Optional; same key within 15 min returns the same booking }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [slotId], properties: { slotId: { type: string, format: uuid } } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/CheckoutResponse' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'SLOT_UNAVAILABLE | STUDENT_OVERLAP (details.conflictingBooking) | SLOT_TOO_SOON | TUTOR_NOT_ACCEPTING', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    get:
+      tags: [student]
+      operationId: listMyBookings
+      summary: List my bookings
+      x-roles: [STUDENT]
+      parameters:
+        - { name: scope, in: query, schema: { type: string, enum: [upcoming, past, cancelled], default: upcoming } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/BookingPage' } } } }
+  /bookings/{bookingId}:
+    get:
+      tags: [student]
+      operationId: getMyBooking
+      summary: Get my booking
+      x-roles: [STUDENT]
+      description: Used by the payment result page (poll). Lazily expires overdue PENDING_PAYMENT.
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Booking' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /bookings/{bookingId}/checkout:
+    post:
+      tags: [student]
+      operationId: resumeCheckout
+      summary: Resume checkout
+      x-roles: [STUDENT]
+      description: Returns checkout URL again while PENDING_PAYMENT and not expired.
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/CheckoutResponse' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: BOOKING_NOT_PAYABLE, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /bookings/{bookingId}/cancel:
+    post:
+      tags: [student]
+      operationId: studentCancelBooking
+      summary: Student cancel booking
+      x-roles: [STUDENT]
+      description: |
+        PENDING_PAYMENT -> EXPIRED (no refund). CONFIRMED and startAt - now >= CANCELLATION_WINDOW_HOURS -> CANCELLED_BY_STUDENT, 100% refund.
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      requestBody:
+        required: false
+        content: { application/json: { schema: { type: object, additionalProperties: false, properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Booking' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'WINDOW_PASSED | NOT_CONFIRMED | SESSION_STARTED', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /bookings/{bookingId}/reschedule:
+    post:
+      tags: [student]
+      operationId: rescheduleBooking
+      summary: Reschedule booking
+      x-roles: [STUDENT]
+      description: CONFIRMED, >= window, rescheduleCount = 0, new slot of same tutor & same duration. Atomic.
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [newSlotId], properties: { newSlotId: { type: string, format: uuid } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Booking' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'WINDOW_PASSED | RESCHEDULE_LIMIT | NOT_CONFIRMED | SLOT_UNAVAILABLE | SLOT_TOO_SOON | STUDENT_OVERLAP', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /bookings/{bookingId}/review:
+    post:
+      tags: [student]
+      operationId: reviewBooking
+      summary: Review booking
+      x-roles: [STUDENT]
+      description: CONFIRMED and endAt <= now; one review per booking.
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [rating]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Review' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'NOT_CONFIRMED | NOT_FINISHED | ALREADY_REVIEWED', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  # ---------------- payments ----------------
+  /mock-gateway/payments/{paymentId}:
+    get:
+      tags: [payments]
+      operationId: getMockGatewayPayment
+      summary: Get mock gateway payment
+      x-roles: [STUDENT]
+      x-requires: caller owns the booking; MOCK_GATEWAY_ENABLED
+      description: Data for the mock gateway page S-08. 404 when MOCK_GATEWAY_ENABLED=false. Responses carry Cache-Control no-store and Referrer-Policy no-referrer.
+      parameters: [ { $ref: '#/components/parameters/PaymentId' } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [paymentId, bookingId, bookingCode, amountVnd, status, completable]
+                properties:
+                  paymentId: { type: string, format: uuid }
+                  bookingId: { type: string, format: uuid }
+                  bookingCode: { type: string }
+                  amountVnd: { type: integer }
+                  status: { $ref: '#/components/schemas/PaymentStatus' }
+                  holdExpired: { type: boolean }
+                  completable: { type: boolean, description: 'false once already completed at the gateway or PAID/REFUNDED' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /mock-gateway/payments/{paymentId}/complete:
+    post:
+      tags: [payments]
+      operationId: completeMockGatewayPayment
+      summary: Complete mock gateway payment
+      x-roles: [STUDENT]
+      x-requires: caller owns the booking; MOCK_GATEWAY_ENABLED
+      description: |
+        Simulates the shopper's choice. The API (not the browser) builds the event, signs it with HMAC and POSTs it
+        to /payments/webhooks/mock over real HTTP. Allowed once per payment, while payment is PENDING or
+        FAILED(HOLD_EXPIRED) (late payment demo -> auto refund).
+      parameters: [ { $ref: '#/components/parameters/PaymentId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [result], properties: { result: { type: string, enum: [SUCCESS, FAILURE] } } } } }
+      responses:
+        '200':
+          description: Webhook dispatched
+          content: { application/json: { schema: { type: object, required: [redirectUrl], properties: { redirectUrl: { type: string, examples: ['/thanh-toan/{bookingId}/ket-qua'] } } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'GATEWAY_ALREADY_COMPLETED | BOOKING_NOT_PAYABLE', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /payments/webhooks/mock:
+    post:
+      tags: [payments]
+      operationId: mockPaymentWebhook
+      summary: Mock payment webhook
+      security: []
+      x-roles: [PUBLIC]
+      x-auth: HMAC-SHA256 over `t + "." + rawBody` with PAYMENT_WEBHOOK_SECRET; |now - t| <= 300s
+      description: |
+        Server-to-server callback from the mock gateway. Idempotent on eventId (INSERT ... ON CONFLICT DO NOTHING,
+        then lock booking, all in one transaction). Signature is verified on the raw body before JSON parsing;
+        rejected requests are logged without payload and never stored. Body <= 4 KB, 60 req/min/IP.
+        Internal only: nginx returns 404 for this path from outside; the gateway calls INTERNAL_WEBHOOK_BASE_URL.
+        Late SUCCEEDED on an expired booking -> payment PAID then auto-refunded; booking stays EXPIRED.
+      parameters:
+        - name: X-Mock-Signature
+          in: header
+          required: true
+          schema: { type: string, pattern: '^t=\d+,v1=[0-9a-f]{64}$' }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/MockWebhookEvent' } } }
+      responses:
+        '200': { description: Processed or duplicate (no-op) }
+        '400': { description: 'Schema invalid | AMOUNT_MISMATCH | UNKNOWN_PAYMENT', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '413': { description: Body larger than 4 KB }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '401': { description: INVALID_SIGNATURE (missing/bad/stale), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  # ---------------- admin ----------------
+  /admin/stats:
+    get:
+      tags: [admin]
+      operationId: adminStats
+      summary: Admin stats
+      x-roles: [ADMIN]
+      description: Dashboard S-24. "Today" uses DISPLAY_TIMEZONE.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pendingTutors: { type: integer }
+                  bookingsToday: { type: integer }
+                  confirmedUpcoming: { type: integer }
+                  refundsFailed: { type: integer }
+  /admin/users:
+    get:
+      tags: [admin]
+      operationId: adminListUsers
+      summary: Admin list users
+      x-roles: [ADMIN]
+      parameters:
+        - { name: role, in: query, schema: { $ref: '#/components/schemas/UserRole' } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/UserStatus' } }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 }, description: email or name contains }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminUserPage' } } } }
+  /admin/users/{userId}/status:
+    patch:
+      tags: [admin]
+      operationId: adminSetUserStatus
+      summary: Admin set user status
+      x-roles: [ADMIN]
+      description: LOCKED increments token_version (sessions revoked). Cannot target any ADMIN account (incl. self). Audited.
+      parameters: [ { name: userId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/UserStatus' }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminUser' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: CANNOT_LOCK_ADMIN, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /admin/tutors:
+    get:
+      tags: [admin]
+      operationId: adminListTutors
+      summary: Admin list tutors
+      x-roles: [ADMIN]
+      parameters:
+        - { name: approvalStatus, in: query, schema: { $ref: '#/components/schemas/TutorApprovalStatus' } }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 }, description: name or email contains }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminTutorPage' } } } }
+  /admin/tutors/{tutorId}/{action}:
+    post:
+      tags: [admin]
+      operationId: adminTutorDecision
+      summary: Admin tutor decision
+      x-roles: [ADMIN]
+      description: |
+        approve: PENDING_APPROVAL -> APPROVED; reject: PENDING_APPROVAL -> REJECTED (reason required);
+        suspend: APPROVED -> SUSPENDED; reinstate: SUSPENDED -> APPROVED. Audited. Existing bookings untouched.
+        Unknown action -> 400; target user not a TUTOR -> 404.
+      parameters:
+        - { $ref: '#/components/parameters/TutorId' }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [approve, reject, suspend, reinstate] } }
+      requestBody:
+        required: false
+        content: { application/json: { schema: { type: object, additionalProperties: false, properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminTutor' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: INVALID_STATE, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /admin/bookings:
+    get:
+      tags: [admin]
+      operationId: adminListBookings
+      summary: Admin list bookings
+      x-roles: [ADMIN]
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/BookingStatus' } }
+        - { name: tutorId, in: query, schema: { type: string, format: uuid } }
+        - { name: studentId, in: query, schema: { type: string, format: uuid } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/BookingPage' } } } }
+  /admin/bookings/{bookingId}:
+    get:
+      tags: [admin]
+      operationId: adminGetBooking
+      summary: Admin get booking
+      x-roles: [ADMIN]
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminBookingDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/bookings/{bookingId}/cancel:
+    post:
+      tags: [admin]
+      operationId: adminCancelBooking
+      summary: Admin cancel booking
+      x-roles: [ADMIN]
+      description: CONFIRMED and now < startAt -> CANCELLED_BY_ADMIN, slot CLOSED. Audited.
+      parameters: [ { $ref: '#/components/parameters/BookingId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+                refund: { type: boolean, default: true }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminBookingDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'NOT_CONFIRMED | SESSION_STARTED', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /admin/payments/{paymentId}/refund:
+    post:
+      tags: [admin]
+      operationId: adminRefundPayment
+      summary: Admin refund payment
+      x-roles: [ADMIN]
+      description: PAID -> REFUNDED via PaymentProvider.refund. Second call -> 409 ALREADY_REFUNDED. Audited.
+      parameters: [ { name: paymentId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Payment' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'ALREADY_REFUNDED | PAYMENT_NOT_REFUNDABLE', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /admin/reviews/{reviewId}:
+    patch:
+      tags: [admin]
+      operationId: adminHideReview
+      summary: Admin hide review
+      x-roles: [ADMIN]
+      description: Optional (not required for MVP). Recomputes tutor rating.
+      parameters: [ { name: reviewId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [hidden], properties: { hidden: { type: boolean } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Review' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/audit-logs:
+    get:
+      tags: [admin]
+      operationId: adminListAuditLogs
+      summary: Admin list audit logs
+      x-roles: [ADMIN]
+      parameters:
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: entityId, in: query, schema: { type: string } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuditLogPage' } } } }
+
+components:
+  securitySchemes:
+    cookieAuth: { type: apiKey, in: cookie, name: tb_session }
+
+  parameters:
+    Page: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    PageSize: { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    TutorId: { name: tutorId, in: path, required: true, schema: { type: string, format: uuid } }
+    SlotId: { name: slotId, in: path, required: true, schema: { type: string, format: uuid } }
+    BookingId: { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+    PaymentId: { name: paymentId, in: path, required: true, schema: { type: string, format: uuid } }
+
+  responses:
+    ValidationFailed: { description: VALIDATION_FAILED, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    Unauthorized: { description: UNAUTHENTICATED, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    NotFound: { description: NOT_FOUND (also returned for resources not owned by caller), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    Conflict: { description: Business rule conflict (see code), content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    TooManyRequests: { description: RATE_LIMITED, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  schemas:
+    ErrorCode:
+      type: string
+      enum: [VALIDATION_FAILED, UNAUTHENTICATED, FORBIDDEN, PASSWORD_CHANGE_REQUIRED, NOT_FOUND, RATE_LIMITED, INVALID_CREDENTIALS, ACCOUNT_LOCKED, EMAIL_TAKEN, WRONG_CURRENT_PASSWORD, TUTOR_NOT_ACCEPTING, SLOT_OVERLAP, SLOT_LOCKED, SLOT_UNAVAILABLE, SLOT_TOO_SOON, STUDENT_OVERLAP, BOOKING_NOT_PAYABLE, GATEWAY_ALREADY_COMPLETED, WINDOW_PASSED, RESCHEDULE_LIMIT, NOT_CONFIRMED, SESSION_STARTED, NOT_FINISHED, ALREADY_REVIEWED, INVALID_SIGNATURE, AMOUNT_MISMATCH, UNKNOWN_PAYMENT, ALREADY_REFUNDED, PAYMENT_NOT_REFUNDABLE, CANNOT_LOCK_ADMIN, INVALID_STATE, FILE_TOO_LARGE, UNSUPPORTED_FILE_TYPE, INTERNAL_ERROR]
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string, description: 'Developer-facing English text; UI must not display it' }
+            details:
+              type: object
+              description: |
+                VALIDATION_FAILED -> { fields: [{ field, code }] };
+                STUDENT_OVERLAP -> { conflictingBooking: { id, code, startAt, endAt, tutorName } }
+              additionalProperties: true
+    ReasonCode:
+      type: string
+      enum: [WINDOW_PASSED, RESCHEDULE_LIMIT, NOT_CONFIRMED, SESSION_STARTED, NOT_FINISHED, ALREADY_REVIEWED]
+    ActionFlag:
+      type: object
+      required: [allowed]
+      properties:
+        allowed: { type: boolean }
+        reasonCode: { oneOf: [ { $ref: '#/components/schemas/ReasonCode' }, { type: 'null' } ] }
+
+    UserRole: { type: string, enum: [STUDENT, TUTOR, ADMIN] }
+    UserStatus: { type: string, enum: [ACTIVE, LOCKED] }
+    TutorApprovalStatus: { type: string, enum: [PENDING_APPROVAL, APPROVED, REJECTED, SUSPENDED] }
+    SlotStatus: { type: string, enum: [AVAILABLE, HELD, BOOKED, CLOSED] }
+    BookingStatus: { type: string, enum: [PENDING_PAYMENT, CONFIRMED, EXPIRED, CANCELLED_BY_STUDENT, CANCELLED_BY_TUTOR, CANCELLED_BY_ADMIN] }
+    PaymentStatus: { type: string, enum: [PENDING, PAID, FAILED, REFUNDED] }
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, fullName, role]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        role: { type: string, enum: [STUDENT, TUTOR] }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    Me:
+      type: object
+      required: [id, email, fullName, role, status]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        fullName: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+        status: { $ref: '#/components/schemas/UserStatus' }
+        mustChangePassword: { type: boolean }
+        tutorApprovalStatus: { $ref: '#/components/schemas/TutorApprovalStatus' }
+
+    Subject:
+      type: object
+      required: [id, name, slug]
+      properties: { id: { type: integer }, name: { type: string }, slug: { type: string } }
+
+    TutorSummary:
+      type: object
+      required: [id, fullName, subjects, pricePerSessionVnd, ratingAvg, ratingCount]
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        avatarUrl: { type: [string, 'null'] }
+        subjects: { type: array, items: { $ref: '#/components/schemas/Subject' } }
+        pricePerSessionVnd: { type: integer }
+        ratingAvg: { type: number }
+        ratingCount: { type: integer }
+        nextAvailableAt: { type: [string, 'null'], format: date-time }
+    TutorPublic:
+      allOf:
+        - $ref: '#/components/schemas/TutorSummary'
+        - type: object
+          properties:
+            bio: { type: string }
+            experience: { type: string }
+    TutorProfileInput:
+      type: object
+      additionalProperties: false
+      required: [fullName, bio, experience, pricePerSessionVnd, subjectIds]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        bio: { type: string, maxLength: 2000 }
+        experience: { type: string, maxLength: 2000 }
+        pricePerSessionVnd: { type: integer, minimum: 1, maximum: 100000000 }
+        subjectIds: { type: array, minItems: 1, maxItems: 10, items: { type: integer } }
+    TutorOwnProfile:
+      allOf:
+        - $ref: '#/components/schemas/TutorPublic'
+        - type: object
+          properties:
+            approvalStatus: { $ref: '#/components/schemas/TutorApprovalStatus' }
+            rejectionReason: { type: [string, 'null'] }
+
+    PublicSlot:
+      type: object
+      required: [id, startAt, endAt, status]
+      properties:
+        id: { type: string, format: uuid }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        status: { type: string, enum: [AVAILABLE, UNAVAILABLE], description: 'AVAILABLE = bookable now (>= MIN_BOOKING_LEAD); HELD/BOOKED/too-soon collapse to UNAVAILABLE; no booker info' }
+    SlotDetail:
+      allOf:
+        - $ref: '#/components/schemas/PublicSlot'
+        - type: object
+          required: [tutor, priceVnd]
+          properties:
+            tutor: { $ref: '#/components/schemas/TutorSummary' }
+            priceVnd: { type: integer, description: current tutor price (snapshot taken at booking time) }
+    TutorSlot:
+      type: object
+      required: [id, startAt, endAt, status]
+      properties:
+        id: { type: string, format: uuid }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        status: { $ref: '#/components/schemas/SlotStatus' }
+        booking:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties: { id: { type: string, format: uuid }, code: { type: string }, studentName: { type: string } }
+          description: set when BOOKED (HELD shows no booking, per Q6)
+
+    PartyRef:
+      type: object
+      required: [id, fullName]
+      properties: { id: { type: string, format: uuid }, fullName: { type: string } }
+
+    Payment:
+      type: object
+      required: [id, status, amountVnd, provider]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [mock, vnpay] }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        failureReason: { type: [string, 'null'], enum: [DECLINED, HOLD_EXPIRED, CANCELLED_BY_STUDENT, null] }
+        amountVnd: { type: integer }
+        paidAt: { type: [string, 'null'], format: date-time }
+        refundedAt: { type: [string, 'null'], format: date-time }
+        refundFailed: { type: boolean }
+        refundedByName: { type: [string, 'null'], description: admin name for manual refunds (admin views only) }
+
+    Booking:
+      description: Student view (StudentBooking). Tutors get TutorBooking; admins get AdminBookingDetail.
+      type: object
+      required: [id, status, startAt, endAt, priceVnd, tutor, student, rescheduleCount, payment]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ['BK-1024'], description: display code }
+        slotId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/BookingStatus' }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        priceVnd: { type: integer }
+        holdExpiresAt: { type: [string, 'null'], format: date-time }
+        rescheduleCount: { type: integer, minimum: 0, maximum: 1 }
+        tutor: { $ref: '#/components/schemas/PartyRef' }
+        student: { $ref: '#/components/schemas/PartyRef' }
+        payment: { $ref: '#/components/schemas/Payment' }
+        cancelReason: { type: [string, 'null'] }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+        cancelDeadline: { type: string, format: date-time, description: startAt - CANCELLATION_WINDOW_HOURS }
+        isFinished: { type: boolean, description: 'CONFIRMED and endAt <= server now ("Đã diễn ra")' }
+        actions:
+          type: object
+          description: Computed by server policy for the caller; UI must not re-implement rules.
+          required: [cancel, reschedule, review]
+          properties:
+            cancel: { $ref: '#/components/schemas/ActionFlag' }
+            reschedule: { $ref: '#/components/schemas/ActionFlag' }
+            review: { $ref: '#/components/schemas/ActionFlag' }
+        review: { oneOf: [ { $ref: '#/components/schemas/Review' }, { type: 'null' } ] }
+        serverTime: { type: string, format: date-time, description: present on single-booking responses; use for countdown }
+        createdAt: { type: string, format: date-time }
+    TutorBooking:
+      description: Tutor view — no payment, hold, student email or student cancel reason (Security A1).
+      type: object
+      required: [id, code, status, startAt, endAt, priceVnd, student, actions]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        status: { $ref: '#/components/schemas/BookingStatus' }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        priceVnd: { type: integer }
+        student: { type: object, required: [fullName], properties: { fullName: { type: string } } }
+        isFinished: { type: boolean }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+        cancelledByRole: { type: [string, 'null'], enum: [STUDENT, TUTOR, ADMIN, null] }
+        tutorCancelReason: { type: [string, 'null'], description: only the tutor's own reason }
+        actions:
+          type: object
+          required: [cancel]
+          properties: { cancel: { $ref: '#/components/schemas/ActionFlag' } }
+    TutorBookingPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/TutorBooking' } } } } ]
+    PublicReview:
+      description: Public/tutor view (Security A2) — no bookingId, no hidden flag; hidden reviews are filtered out.
+      type: object
+      required: [id, rating, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        studentName: { type: string, description: 'abbreviated, e.g. "Nguyễn A."' }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+    PublicReviewPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/PublicReview' } } } } ]
+    CheckoutResponse:
+      type: object
+      required: [booking, checkoutUrl, serverTime]
+      properties:
+        booking: { $ref: '#/components/schemas/Booking' }
+        checkoutUrl: { type: string, description: 'mock: /cong-thanh-toan-gia-lap/{paymentId} (SPA route)' }
+        serverTime: { type: string, format: date-time }
+    BookingHistoryEntry:
+      type: object
+      properties:
+        fromStatus: { type: [string, 'null'] }
+        toStatus: { type: string }
+        fromSlotId: { type: [string, 'null'] }
+        toSlotId: { type: [string, 'null'] }
+        actorType: { type: string, enum: [USER, SYSTEM, PROVIDER] }
+        actorId: { type: [string, 'null'] }
+        note: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+    AdminBookingDetail:
+      allOf:
+        - $ref: '#/components/schemas/Booking'
+        - type: object
+          properties:
+            studentEmail: { type: string }
+            tutorEmail: { type: string }
+            history: { type: array, items: { $ref: '#/components/schemas/BookingHistoryEntry' } }
+            paymentEvents:
+              type: array
+              items: { type: object, properties: { eventId: { type: string }, outcome: { type: string }, rejectedReason: { type: [string, 'null'] }, receivedAt: { type: string, format: date-time } }, description: only signature-verified events are stored }
+
+    Review:
+      type: object
+      required: [id, rating, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        bookingId: { type: string, format: uuid }
+        studentName: { type: string, description: 'display name only' }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: [string, 'null'] }
+        hidden: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    MockWebhookEvent:
+      type: object
+      additionalProperties: false
+      required: [eventId, providerRef, outcome, amountVnd, occurredAt]
+      properties:
+        eventId: { type: string, pattern: '^evt_[0-9a-f-]{36}$' }
+        providerRef: { type: string, maxLength: 64 }
+        outcome: { type: string, enum: [SUCCEEDED, FAILED] }
+        amountVnd: { type: integer, minimum: 1 }
+        occurredAt: { type: string, format: date-time }
+
+    ReasonRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties: { reason: { type: string, minLength: 1, maxLength: 500 } }
+
+    AdminUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        fullName: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+        status: { $ref: '#/components/schemas/UserStatus' }
+        tutorApprovalStatus: { $ref: '#/components/schemas/TutorApprovalStatus' }
+        createdAt: { type: string, format: date-time }
+    AdminTutor:
+      allOf:
+        - $ref: '#/components/schemas/TutorOwnProfile'
+        - type: object
+          properties:
+            email: { type: string }
+            reviewedAt: { type: [string, 'null'], format: date-time }
+
+    AuditLog:
+      type: object
+      properties:
+        id: { type: integer }
+        actorId: { type: [string, 'null'] }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        reason: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+
+    PageMeta:
+      type: object
+      required: [page, pageSize, total]
+      properties: { page: { type: integer }, pageSize: { type: integer }, total: { type: integer } }
+    TutorSummaryPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/TutorSummary' } } } } ]
+    BookingPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Booking' } } } } ]
+    ReviewPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Review' } } } } ]
+    AdminUserPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/AdminUser' } } } } ]
+    AdminTutorPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/AdminTutor' } } } } ]
+    AuditLogPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/AuditLog' } } } } ]

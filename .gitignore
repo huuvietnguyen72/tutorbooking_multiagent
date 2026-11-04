@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+.env
+.env.*
+!.env.example
+
+# Paperclip workspace scratch files (not part of the product repo)
+/c.json
+/plan-QUA-2.md
+/.claude/
+/.paperclip/

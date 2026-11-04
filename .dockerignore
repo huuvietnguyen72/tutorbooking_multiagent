@@ -1,0 +1,15 @@
+.git
+.github
+.gitignore
+node_modules
+**/node_modules
+**/dist
+**/coverage
+*.log
+.env
+.env.*
+!.env.example
+docs
+e2e
+**/*.md
+/tmp
