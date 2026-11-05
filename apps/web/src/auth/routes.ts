@@ -23,6 +23,8 @@ export const ROUTES = {
   adminTutors: '/admin/gia-su-cho-duyet',
   adminUsers: '/admin/nguoi-dung',
   adminBookings: '/admin/booking',
+  adminBooking: (id: string) => `/admin/booking/${id}`,
+  adminAudit: '/admin/nhat-ky',
 } as const;
 
 /** Where a user lands right after login (design §2.5). */

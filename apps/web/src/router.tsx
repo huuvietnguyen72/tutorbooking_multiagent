@@ -14,6 +14,12 @@ import {
   ServerErrorPage,
   TutorGatePage,
 } from './pages/MiscPages';
+import AdminAuditPage from './pages/admin/AdminAuditPage';
+import AdminBookingDetailPage from './pages/admin/AdminBookingDetailPage';
+import AdminBookingsPage from './pages/admin/AdminBookingsPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminTutorsPage from './pages/admin/AdminTutorsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
 import RegisterPage from './pages/RegisterPage';
 import TutorDetailPage from './pages/TutorDetailPage';
 import TutorListPage from './pages/TutorListPage';
@@ -71,8 +77,12 @@ export const routes: RouteObject[] = [
       {
         element: <RequireAuth roles={['ADMIN']} />,
         children: [
-          { path: ROUTES.admin, element: placeholder },
-          { path: '/admin/*', element: placeholder },
+          { path: ROUTES.admin, element: <AdminDashboardPage /> },
+          { path: ROUTES.adminTutors, element: <AdminTutorsPage /> },
+          { path: ROUTES.adminUsers, element: <AdminUsersPage /> },
+          { path: ROUTES.adminBookings, element: <AdminBookingsPage /> },
+          { path: '/admin/booking/:bookingId', element: <AdminBookingDetailPage /> },
+          { path: ROUTES.adminAudit, element: <AdminAuditPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

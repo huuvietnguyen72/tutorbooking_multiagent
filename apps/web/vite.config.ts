@@ -16,6 +16,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     setupFiles: ['./src/test/setup.ts'],
+    // Resolve jest-dom against this test runner, including linked workspace installs.
+    server: { deps: { inline: ['@testing-library/jest-dom'] } },
     css: false,
     // antd + jsdom is slow on first render
     testTimeout: 20000,
