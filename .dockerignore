@@ -11,5 +11,6 @@ node_modules
 !.env.example
 docs
 e2e
+!e2e/package.json
 **/*.md
 /tmp

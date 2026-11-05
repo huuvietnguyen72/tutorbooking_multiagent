@@ -6,6 +6,7 @@ ENV NODE_ENV=development
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
+COPY e2e/package.json ./e2e/package.json
 RUN npm ci
 COPY apps/api ./apps/api
 RUN npm run build --workspace @tutor/api
@@ -19,6 +20,7 @@ RUN apk add --no-cache openssl
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
+COPY e2e/package.json ./e2e/package.json
 RUN npm ci --omit=dev && npm cache clean --force
 COPY apps/api/prisma ./apps/api/prisma
 RUN cd apps/api && npx prisma generate
