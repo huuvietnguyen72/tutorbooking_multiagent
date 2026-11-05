@@ -36,6 +36,7 @@ type Query = Record<string, string | number | boolean | undefined | null>;
 interface RequestOptions {
   query?: Query;
   body?: unknown;
+  headers?: Record<string, string>;
   signal?: AbortSignal;
 }
 
@@ -65,7 +66,7 @@ export async function request<T>(
       method,
       credentials: 'same-origin',
       // For FormData the browser sets the multipart boundary itself.
-      headers: hasBody && !isForm ? { 'Content-Type': 'application/json' } : undefined,
+      headers: hasBody && !isForm ? { 'Content-Type': 'application/json', ...options.headers } : options.headers,
       body: hasBody ? (isForm ? (options.body as FormData) : JSON.stringify(options.body)) : undefined,
       signal: options.signal,
     });

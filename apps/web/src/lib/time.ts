@@ -112,3 +112,8 @@ export function todayKey(): string {
 export function timeKey(iso: string): string {
   return inVn(iso).format('HH:mm');
 }
+
+/** e.g. `Mon, 17/11/2026 19:00–20:00` (localised weekday) */
+export function formatSession(startIso: string, endIso: string): string {
+  return `${formatWeekdayDate(startIso)} ${formatTimeRange(startIso, endIso)}`;
+}

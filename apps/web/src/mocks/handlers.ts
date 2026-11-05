@@ -11,6 +11,7 @@ import type {
   TutorSummary,
 } from '../api/types';
 import { dayKey } from '../lib/time';
+import { isSlotTaken, resetStudentState, studentHandlers } from './studentHandlers';
 import { reviews, subjects, tutors, users, type MockUser } from './data';
 
 /** Handlers follow docs/openapi.yaml (servers: /api/v1). In-memory session state resets via `resetMockState`. */
@@ -30,6 +31,7 @@ export function resetMockState(): void {
   sessionUserId = null;
   registered = [];
   tutorStates = new Map();
+  resetStudentState();
   for (const u of users) {
     if (u.id === 'u-admin') u.mustChangePassword = true;
   }
@@ -307,6 +309,7 @@ const tutorHandlers = [
 
 export const handlers = [
   ...tutorHandlers,
+  ...studentHandlers({ currentUser, error, slotsFor }),
   http.get(`${BASE}/config/public`, () =>
     HttpResponse.json({
       cancellationWindowHours: 24,
@@ -410,7 +413,9 @@ export const handlers = [
     const from = q.get('from');
     const to = q.get('to');
     if (!from || !to || Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to))) return error(400, 'VALIDATION_FAILED');
-    return HttpResponse.json(slotsFor(String(params.tutorId), from, to));
+    return HttpResponse.json(
+      slotsFor(String(params.tutorId), from, to).map((s) => (isSlotTaken(s.id) ? { ...s, status: 'UNAVAILABLE' as const } : s)),
+    );
   }),
 
   http.get(`${BASE}/tutors/:tutorId/reviews`, ({ params, request }) => {

@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { api } from './endpoints';
 import { ApiError } from './client';
 import { ME_KEY } from './queryClient';
-import type { Me, RegisterRequest, TeachingScope, TutorProfileInput, TutorSearchParams } from './types';
+import type { Me, RegisterRequest, StudentScope, TeachingScope, TutorProfileInput, TutorSearchParams } from './types';
 
 /** `null` = not logged in. */
 export function useMe() {
@@ -185,3 +185,81 @@ export function useMyReviews(page: number, pageSize = 10) {
     placeholderData: keepPreviousData,
   });
 }
+
+// ---- student flow (T8). Keys start with 'student' so the tutor-side 'my' keys stay untouched. ----
+
+export function useSlot(slotId: string) {
+  return useQuery({
+    queryKey: ['slot', slotId],
+    queryFn: ({ signal }) => api.getSlot(slotId, signal),
+    retry: false,
+  });
+}
+
+export function useCreateBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { slotId: string; idempotencyKey?: string }) => api.createBooking(v.slotId, v.idempotencyKey),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['student', 'bookings'] });
+      void qc.invalidateQueries({ queryKey: ['tutor'] });
+    },
+  });
+}
+
+export function useStudentBookings(scope: StudentScope, page: number, pageSize = 10) {
+  return useQuery({
+    queryKey: ['student', 'bookings', scope, page, pageSize],
+    queryFn: ({ signal }) => api.listMyBookings(scope, page, pageSize, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+
+interface BookingQueryOptions {
+  /** ms between refetches, or `false`/`undefined` to stop. */
+  refetchInterval?: number | false;
+}
+
+/** Single booking incl. `serverTime`. Always revalidated on mount: the server may have expired the hold meanwhile. */
+export function useStudentBooking(bookingId: string, options: BookingQueryOptions = {}) {
+  return useQuery({
+    queryKey: ['student', 'booking', bookingId],
+    queryFn: ({ signal }) => api.getMyBooking(bookingId, signal),
+    staleTime: 0,
+    refetchInterval: options.refetchInterval || false,
+  });
+}
+
+/** After any booking mutation both the lists and the detail change, and slots may reopen. */
+function useBookingMutation<V, R>(bookingId: string, mutationFn: (values: V) => Promise<R>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['student'] });
+      void qc.invalidateQueries({ queryKey: ['tutor'] });
+      void qc.invalidateQueries({ queryKey: ['slot'] });
+    },
+    meta: { bookingId },
+  });
+}
+
+export const useResumeCheckout = (bookingId: string) => useBookingMutation(bookingId, () => api.resumeCheckout(bookingId));
+export const useStudentCancel = (bookingId: string) =>
+  useBookingMutation(bookingId, (reason?: string) => api.studentCancelBooking(bookingId, reason));
+export const useReschedule = (bookingId: string) =>
+  useBookingMutation(bookingId, (newSlotId: string) => api.rescheduleBooking(bookingId, newSlotId));
+export const useReviewBooking = (bookingId: string) =>
+  useBookingMutation(bookingId, (v: { rating: number; comment?: string }) => api.reviewBooking(bookingId, v));
+
+export function useGatewayPayment(paymentId: string) {
+  return useQuery({
+    queryKey: ['student', 'gateway', paymentId],
+    queryFn: ({ signal }) => api.getMockGatewayPayment(paymentId, signal),
+    staleTime: 0,
+    retry: false,
+  });
+}
+
+export const useCompleteGatewayPayment = (paymentId: string) =>
+  useMutation({ mutationFn: (result: 'SUCCESS' | 'FAILURE') => api.completeMockGatewayPayment(paymentId, result) });

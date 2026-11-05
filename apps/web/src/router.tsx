@@ -14,6 +14,13 @@ import {
   ServerErrorPage,
   TutorGatePage,
 } from './pages/MiscPages';
+import BookingConfirmPage from './pages/student/BookingConfirmPage';
+import BookingDetailPage from './pages/student/BookingDetailPage';
+import MockGatewayPage from './pages/student/MockGatewayPage';
+import MyBookingsPage from './pages/student/MyBookingsPage';
+import PaymentPage from './pages/student/PaymentPage';
+import PaymentResultPage from './pages/student/PaymentResultPage';
+import ReschedulePage from './pages/student/ReschedulePage';
 import RegisterPage from './pages/RegisterPage';
 import TutorDetailPage from './pages/TutorDetailPage';
 import TutorListPage from './pages/TutorListPage';
@@ -29,6 +36,11 @@ const SESSION_STATES: TutorApprovalStatus[] = ['APPROVED', 'SUSPENDED'];
 const placeholder = <PlaceholderPage />;
 
 export const routes: RouteObject[] = [
+  // S-08 is a standalone page (no app chrome), like a hosted payment gateway.
+  {
+    element: <RequireAuth roles={['STUDENT']} />,
+    children: [{ path: '/cong-thanh-toan-gia-lap/:paymentId', element: <MockGatewayPage /> }],
+  },
   {
     element: <AppLayout />,
     children: [
@@ -49,12 +61,12 @@ export const routes: RouteObject[] = [
       {
         element: <RequireAuth roles={['STUDENT']} />,
         children: [
-          { path: '/dat-lich/:slotId', element: placeholder },
-          { path: ROUTES.myBookings, element: placeholder },
-          { path: '/lich-cua-toi/:bookingId', element: placeholder },
-          { path: '/thanh-toan/:bookingId', element: placeholder },
-          { path: '/thanh-toan/:bookingId/ket-qua', element: placeholder },
-          { path: '/cong-thanh-toan-gia-lap/:paymentId', element: placeholder },
+          { path: '/dat-lich/:slotId', element: <BookingConfirmPage /> },
+          { path: ROUTES.myBookings, element: <MyBookingsPage /> },
+          { path: '/lich-cua-toi/:bookingId', element: <BookingDetailPage /> },
+          { path: '/lich-cua-toi/:bookingId/doi-lich', element: <ReschedulePage /> },
+          { path: '/thanh-toan/:bookingId', element: <PaymentPage /> },
+          { path: '/thanh-toan/:bookingId/ket-qua', element: <PaymentResultPage /> },
         ],
       },
       {

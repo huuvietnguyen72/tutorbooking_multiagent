@@ -19,6 +19,14 @@ export type SlotStatus = S['SlotStatus'];
 export type BookingStatus = S['BookingStatus'];
 export type TutorBooking = S['TutorBooking'];
 export type TutorBookingPage = S['TutorBookingPage'];
+export type Booking = S['Booking'];
+export type BookingPage = S['BookingPage'];
+export type CheckoutResponse = S['CheckoutResponse'];
+export type SlotDetail = S['SlotDetail'];
+export type Review = S['Review'];
+export type Payment = S['Payment'];
+export type PaymentStatus = S['PaymentStatus'];
+export type ReasonCode = S['ReasonCode'];
 export type RegisterRequest = S['RegisterRequest'];
 export type LoginRequest = S['LoginRequest'];
 export type ErrorCode = S['ErrorCode'];
@@ -46,3 +54,15 @@ export interface TutorSearchParams {
 }
 
 export type TeachingScope = 'upcoming' | 'past' | 'cancelled';
+
+export type StudentScope = 'upcoming' | 'past' | 'cancelled';
+
+export interface MockGatewayPayment {
+  paymentId: string;
+  bookingId: string;
+  bookingCode: string;
+  amountVnd: number;
+  status: PaymentStatus;
+  holdExpired?: boolean;
+  completable: boolean;
+}
