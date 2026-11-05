@@ -40,11 +40,11 @@ export const cancelDeadline = (booking: Pick<PolicyBooking, 'startAt'>, cfg: Pol
 
 /**
  * Student: PENDING_PAYMENT may always be dropped; CONFIRMED only while `startAt - now >= window`
- * (exactly 24h is still allowed, 24h - 1s is not). Tutor: any time before the session starts.
+ * (exactly 24h is still allowed, 24h - 1s is not). Tutor and admin: any time before the session starts.
  */
 export function cancellationPolicy(
   booking: PolicyBooking,
-  actor: 'STUDENT' | 'TUTOR',
+  actor: 'STUDENT' | 'TUTOR' | 'ADMIN',
   now: Date,
   cfg: PolicyConfig,
 ): Decision<CancelEffect> {
@@ -59,7 +59,7 @@ export function cancellationPolicy(
   return { allowed: true, effect: 'CANCEL_AND_REFUND' };
 }
 
-/** Same window as cancel, once only (reschedule endpoint itself ships in T5; flag is exposed now). */
+/** Same window as cancel, once only. */
 export function reschedulePolicy(booking: PolicyBooking, now: Date, cfg: PolicyConfig): Decision {
   if (booking.status !== 'CONFIRMED') return { allowed: false, code: 'NOT_CONFIRMED' };
   if (now.getTime() >= booking.startAt.getTime()) return { allowed: false, code: 'SESSION_STARTED' };

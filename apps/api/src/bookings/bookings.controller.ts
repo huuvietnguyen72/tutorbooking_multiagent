@@ -7,18 +7,24 @@ import {
   idempotencyKeySchema,
   listBookingsSchema,
   reasonSchema,
+  rescheduleSchema,
   studentCancelSchema,
   StudentBookingDto,
   TutorBookingDto,
 } from './bookings.dto';
 import { BookingsService, CheckoutDto, Page } from './bookings.service';
+import { ReviewDto, ReviewsService } from '../reviews/reviews.service';
+import { reviewSchema } from '../reviews/reviews.dto';
 
 const MINUTE = 60_000;
 
 @Roles('STUDENT')
 @Controller('bookings')
 export class BookingsController {
-  constructor(private readonly bookings: BookingsService) {}
+  constructor(
+    private readonly bookings: BookingsService,
+    private readonly reviews: ReviewsService,
+  ) {}
 
   @RateLimit({ name: 'create-booking', limit: 10, ttlMs: MINUTE, key: (req) => `user:${req.user?.id ?? req.ip}` })
   @Post()
@@ -60,6 +66,23 @@ export class BookingsController {
   ): Promise<StudentBookingDto> {
     const input = parse(studentCancelSchema, body);
     return this.bookings.cancel(user.id, uuidParam(bookingId, 'bookingId'), input.reason ?? null);
+  }
+
+  @HttpCode(200)
+  @Post(':bookingId/reschedule')
+  reschedule(
+    @CurrentUser() user: AuthUser,
+    @Param('bookingId') bookingId: string,
+    @Body() body: unknown,
+  ): Promise<StudentBookingDto> {
+    const input = parse(rescheduleSchema, body);
+    return this.bookings.reschedule(user.id, uuidParam(bookingId, 'bookingId'), input.newSlotId);
+  }
+
+  @Post(':bookingId/review')
+  review(@CurrentUser() user: AuthUser, @Param('bookingId') bookingId: string, @Body() body: unknown): Promise<ReviewDto> {
+    const input = parse(reviewSchema, body);
+    return this.reviews.create(user.id, uuidParam(bookingId, 'bookingId'), input.rating, input.comment ?? null);
   }
 }
 

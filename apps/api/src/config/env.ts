@@ -31,6 +31,12 @@ const envSchema = z
     CANCELLATION_WINDOW_HOURS: z.coerce.number().int().min(0).max(168).default(24),
     /** 0 disables the in-process timer (tests call the job directly). */
     EXPIRY_JOB_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(30),
+    /** SMTP relay for the email outbox (Mailpit in compose). */
+    SMTP_HOST: z.string().min(1).default('localhost'),
+    SMTP_PORT: z.coerce.number().int().positive().max(65535).default(1025),
+    MAIL_FROM: z.string().min(3).default('Tutor Booking <no-reply@tutor.local>'),
+    /** 0 disables the in-process outbox worker (tests drive it by hand). */
+    MAIL_WORKER_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(15),
     PAYMENT_PROVIDER: z.enum(['mock', 'vnpay']).default('mock'),
     /** Off by default in production (B1); compose demo opts in through .env. */
     MOCK_GATEWAY_ENABLED: z.enum(['true', 'false']).optional(),
