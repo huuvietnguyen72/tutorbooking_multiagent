@@ -19,6 +19,8 @@ export default defineConfig({
     // Resolve jest-dom against this test runner, including linked workspace installs.
     server: { deps: { inline: ['@testing-library/jest-dom'] } },
     css: false,
+    // Keep the antd/jsdom suites from competing for CPU on small CI runners.
+    maxWorkers: 1,
     // antd + jsdom is slow on first render
     testTimeout: 20000,
   },

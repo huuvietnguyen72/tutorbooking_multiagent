@@ -1,5 +1,12 @@
 import { request } from './client';
 import type {
+  Booking,
+  BookingPage,
+  CheckoutResponse,
+  MockGatewayPayment,
+  Review,
+  SlotDetail,
+  StudentScope,
   AdminBookingDetail,
   AdminBookingParams,
   AdminStats,
@@ -11,7 +18,6 @@ import type {
   AdminUserParams,
   AuditLogPage,
   AuditLogParams,
-  BookingPage,
   Payment,
   TutorAction,
   UserStatus,
@@ -85,6 +91,28 @@ export const api = {
   listMyReviews: (page: number, pageSize: number, signal?: AbortSignal) =>
     request<PublicReviewPage>('GET', '/tutor/reviews', { query: { page, pageSize }, signal }),
 
+  getSlot: (slotId: string, signal?: AbortSignal) =>
+    request<SlotDetail>('GET', `/slots/${encodeURIComponent(slotId)}`, { signal }),
+
+  createBooking: (slotId: string, idempotencyKey?: string) =>
+    request<CheckoutResponse>('POST', '/bookings', { body: { slotId }, headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined }),
+  listMyBookings: (scope: StudentScope, page: number, pageSize: number, signal?: AbortSignal) =>
+    request<BookingPage>('GET', '/bookings', { query: { scope, page, pageSize }, signal }),
+  getMyBooking: (bookingId: string, signal?: AbortSignal) =>
+    request<Booking>('GET', `/bookings/${encodeURIComponent(bookingId)}`, { signal }),
+  resumeCheckout: (bookingId: string) =>
+    request<CheckoutResponse>('POST', `/bookings/${encodeURIComponent(bookingId)}/checkout`),
+  studentCancelBooking: (bookingId: string, reason?: string) =>
+    request<Booking>('POST', `/bookings/${encodeURIComponent(bookingId)}/cancel`, { body: reason ? { reason } : {} }),
+  rescheduleBooking: (bookingId: string, newSlotId: string) =>
+    request<Booking>('POST', `/bookings/${encodeURIComponent(bookingId)}/reschedule`, { body: { newSlotId } }),
+  reviewBooking: (bookingId: string, body: { rating: number; comment?: string }) =>
+    request<Review>('POST', `/bookings/${encodeURIComponent(bookingId)}/review`, { body }),
+
+  getMockGatewayPayment: (paymentId: string, signal?: AbortSignal) =>
+    request<MockGatewayPayment>('GET', `/mock-gateway/payments/${encodeURIComponent(paymentId)}`, { signal }),
+  completeMockGatewayPayment: (paymentId: string, result: 'SUCCESS' | 'FAILURE') =>
+    request<{ redirectUrl: string }>('POST', `/mock-gateway/payments/${encodeURIComponent(paymentId)}/complete`, { body: { result } }),
   adminStats: (signal?: AbortSignal) => request<AdminStats>('GET', '/admin/stats', { signal }),
   adminListUsers: (params: AdminUserParams, signal?: AbortSignal) =>
     request<AdminUserPage>('GET', '/admin/users', { query: { ...params }, signal }),

@@ -86,16 +86,24 @@ export class TutorSlotsService {
     for (let i = 1; i < sorted.length; i++) {
       if (sorted[i].getTime() - sorted[i - 1].getTime() < length) throw overlap();
     }
-    try {
-      const created = await this.prisma.$transaction(
-        sorted.map((startAt) =>
-          this.prisma.slot.create({ data: { tutorId, startAt, endAt: this.endOf(startAt) }, include: this.include }),
-        ),
-      );
-      return created.map((s) => this.toDto(s));
-    } catch (error) {
-      if (isOverlapViolation(error)) throw overlap();
-      throw error;
+    // Concurrent GiST exclusion checks can deadlock before PostgreSQL reports
+    // an overlap. Retry the whole rolled-back transaction so the winner commits
+    // and the losing request receives the existing SLOT_OVERLAP response.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const created = await this.prisma.$transaction(
+          sorted.map((startAt) =>
+            this.prisma.slot.create({ data: { tutorId, startAt, endAt: this.endOf(startAt) }, include: this.include }),
+          ),
+        );
+        return created.map((s) => this.toDto(s));
+      } catch (error) {
+        if (isOverlapViolation(error)) throw overlap();
+        const deadlock = error instanceof Prisma.PrismaClientKnownRequestError
+          ? error.code === 'P2034'
+          : error instanceof Prisma.PrismaClientUnknownRequestError && /40P01/.test(error.message);
+        if (!deadlock || attempt >= 3) throw error;
+      }
     }
   }
 

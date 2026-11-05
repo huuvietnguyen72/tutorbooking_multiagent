@@ -22,6 +22,10 @@ export type TutorBookingPage = S['TutorBookingPage'];
 export type UserStatus = S['UserStatus'];
 export type PaymentStatus = S['PaymentStatus'];
 export type Payment = S['Payment'];
+export type CheckoutResponse = S['CheckoutResponse'];
+export type SlotDetail = S['SlotDetail'];
+export type Review = S['Review'];
+export type ReasonCode = S['ReasonCode'];
 export type Booking = S['Booking'];
 export type BookingPage = S['BookingPage'];
 export type AdminUser = S['AdminUser'];
@@ -98,4 +102,16 @@ export interface AuditLogParams {
   entityId?: string;
   page?: number;
   pageSize?: number;
+}
+
+export type StudentScope = 'upcoming' | 'past' | 'cancelled';
+
+export interface MockGatewayPayment {
+  paymentId: string;
+  bookingId: string;
+  bookingCode: string;
+  amountVnd: number;
+  status: PaymentStatus;
+  holdExpired?: boolean;
+  completable: boolean;
 }

@@ -88,6 +88,60 @@ jobs:
             .env
           docker compose config --quiet
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Prepare .env (random CI-only secrets)
+        run: |
+          cp .env.example .env
+          sed -i \
+            -e "s/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=$(openssl rand -hex 16)/" \
+            -e "s/^JWT_SECRET=$/JWT_SECRET=$(openssl rand -hex 32)/" \
+            -e "s/^PAYMENT_WEBHOOK_SECRET=$/PAYMENT_WEBHOOK_SECRET=$(openssl rand -hex 32)/" \
+            -e "s/^SEED_ADMIN_PASSWORD=$/SEED_ADMIN_PASSWORD=$(openssl rand -hex 16)/" \
+            .env
+      - name: Boot stack (compose test override)
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
+          timeout 240s bash -c 'until [ "$(docker compose ps api --format "{{.Health}}")" = healthy ]; do sleep 3; done'
+          curl -fsS --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/ >/dev/null
+          curl -fsS --retry 10 --retry-delay 2 --retry-all-errors http://localhost:8025/api/v1/info >/dev/null
+      - name: Run Playwright
+        env:
+          E2E_POSTGRES_DB: tutor_booking_test
+        run: |
+          set -a; . ./.env; set +a
+          npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7
+      - name: Dump compose logs on failure
+        if: failure()
+        run: docker compose logs --tail 300 > e2e/compose-logs.txt
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: compose-logs
+          path: e2e/compose-logs.txt
+          retention-days: 7
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v
+
   gitleaks:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-24.04

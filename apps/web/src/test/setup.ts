@@ -1,8 +1,12 @@
 import '@testing-library/jest-dom/vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
 import { cleanup } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll } from 'vitest';
+import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 import { resetMockState } from '../mocks/handlers';
 import { server } from '../mocks/server';
+
+// Registered explicitly: the '@testing-library/jest-dom/vitest' entry can bind to a different vitest instance.
+expect.extend(matchers);
 
 // jsdom lacks these; antd's responsive helpers and Drawer need them.
 Object.defineProperty(window, 'matchMedia', {
