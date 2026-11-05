@@ -82,7 +82,7 @@ describe('login', () => {
     await router.navigate('/gia-su');
     await waitFor(() => expect(router.state.location.pathname).toBe('/doi-mat-khau'));
 
-    await user.type(screen.getByLabelText('Mật khẩu hiện tại'), 'khong-dung-123');
+    await user.type(await screen.findByLabelText('Mật khẩu hiện tại'), 'khong-dung-123');
     await user.type(screen.getByLabelText('Mật khẩu mới'), 'mat-khau-moi-1');
     await user.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'mat-khau-moi-1');
     await user.click(screen.getByRole('button', { name: 'Đổi mật khẩu' }));
