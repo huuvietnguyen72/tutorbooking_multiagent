@@ -10,7 +10,6 @@ import {
   ForbiddenPage,
   HomePage,
   NotFoundPage,
-  PlaceholderPage,
   ServerErrorPage,
   TutorGatePage,
 } from './pages/MiscPages';
@@ -21,6 +20,12 @@ import MyBookingsPage from './pages/student/MyBookingsPage';
 import PaymentPage from './pages/student/PaymentPage';
 import PaymentResultPage from './pages/student/PaymentResultPage';
 import ReschedulePage from './pages/student/ReschedulePage';
+import AdminAuditPage from './pages/admin/AdminAuditPage';
+import AdminBookingDetailPage from './pages/admin/AdminBookingDetailPage';
+import AdminBookingsPage from './pages/admin/AdminBookingsPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminTutorsPage from './pages/admin/AdminTutorsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
 import RegisterPage from './pages/RegisterPage';
 import TutorDetailPage from './pages/TutorDetailPage';
 import TutorListPage from './pages/TutorListPage';
@@ -32,8 +37,6 @@ import TutorSlotsPage from './pages/tutor/TutorSlotsPage';
 
 /** A suspended tutor keeps access to existing sessions/reviews (S-16). */
 const SESSION_STATES: TutorApprovalStatus[] = ['APPROVED', 'SUSPENDED'];
-
-const placeholder = <PlaceholderPage />;
 
 export const routes: RouteObject[] = [
   // S-08 is a standalone page (no app chrome), like a hosted payment gateway.
@@ -83,8 +86,12 @@ export const routes: RouteObject[] = [
       {
         element: <RequireAuth roles={['ADMIN']} />,
         children: [
-          { path: ROUTES.admin, element: placeholder },
-          { path: '/admin/*', element: placeholder },
+          { path: ROUTES.admin, element: <AdminDashboardPage /> },
+          { path: ROUTES.adminTutors, element: <AdminTutorsPage /> },
+          { path: ROUTES.adminUsers, element: <AdminUsersPage /> },
+          { path: ROUTES.adminBookings, element: <AdminBookingsPage /> },
+          { path: '/admin/booking/:bookingId', element: <AdminBookingDetailPage /> },
+          { path: ROUTES.adminAudit, element: <AdminAuditPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

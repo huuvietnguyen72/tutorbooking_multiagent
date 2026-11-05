@@ -2,7 +2,20 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { api } from './endpoints';
 import { ApiError } from './client';
 import { ME_KEY } from './queryClient';
-import type { Me, RegisterRequest, StudentScope, TeachingScope, TutorProfileInput, TutorSearchParams } from './types';
+import type {
+  AdminBookingParams,
+  AdminTutorParams,
+  AdminUserParams,
+  AuditLogParams,
+  Me,
+  RegisterRequest,
+  StudentScope,
+  TeachingScope,
+  TutorAction,
+  TutorProfileInput,
+  TutorSearchParams,
+  UserStatus,
+} from './types';
 
 /** `null` = not logged in. */
 export function useMe() {
@@ -183,6 +196,90 @@ export function useMyReviews(page: number, pageSize = 10) {
   return useQuery({
     queryKey: ['my', 'reviews', page, pageSize],
     queryFn: ({ signal }) => api.listMyReviews(page, pageSize, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+
+// ---- admin (T9). All keys start with 'admin'. ----
+
+export function useAdminStats() {
+  return useQuery({ queryKey: ['admin', 'stats'], queryFn: ({ signal }) => api.adminStats(signal) });
+}
+
+export function useAdminUsers(params: AdminUserParams) {
+  return useQuery({
+    queryKey: ['admin', 'users', params],
+    queryFn: ({ signal }) => api.adminListUsers(params, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminSetUserStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { userId: string; status: UserStatus; reason?: string }) =>
+      api.adminSetUserStatus(v.userId, v.status, v.reason),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'tutors'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'audit'] });
+    },
+  });
+}
+
+export function useAdminTutors(params: AdminTutorParams) {
+  return useQuery({
+    queryKey: ['admin', 'tutors', params],
+    queryFn: ({ signal }) => api.adminListTutors(params, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminTutorDecision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { tutorId: string; action: TutorAction; reason?: string }) =>
+      api.adminTutorDecision(v.tutorId, v.action, v.reason),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin'] });
+      void qc.invalidateQueries({ queryKey: ['tutors'] });
+    },
+  });
+}
+
+export function useAdminBookings(params: AdminBookingParams) {
+  return useQuery({
+    queryKey: ['admin', 'bookings', params],
+    queryFn: ({ signal }) => api.adminListBookings(params, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminBooking(bookingId: string) {
+  return useQuery({
+    queryKey: ['admin', 'booking', bookingId],
+    queryFn: ({ signal }) => api.adminGetBooking(bookingId, signal),
+  });
+}
+
+/** Cancelling or refunding changes the booking, the stats counters and the audit trail. */
+function useAdminBookingMutation<V, R>(mutationFn: (values: V) => Promise<R>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
+  });
+}
+
+export const useAdminCancelBooking = (bookingId: string) =>
+  useAdminBookingMutation((v: { reason: string; refund: boolean }) => api.adminCancelBooking(bookingId, v.reason, v.refund));
+export const useAdminRefundPayment = () =>
+  useAdminBookingMutation((v: { paymentId: string; reason: string }) => api.adminRefundPayment(v.paymentId, v.reason));
+
+export function useAdminAuditLogs(params: AuditLogParams) {
+  return useQuery({
+    queryKey: ['admin', 'audit', params],
+    queryFn: ({ signal }) => api.adminListAuditLogs(params, signal),
     placeholderData: keepPreviousData,
   });
 }

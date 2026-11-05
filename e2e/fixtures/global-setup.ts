@@ -1,7 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { Api } from './api';
-import { ACCOUNTS, demoPassword } from './env';
+import { Db } from './db';
+import { ACCOUNTS, ADMIN_EMAIL, demoPassword } from './env';
 import { AUTH_DIR, STUDENT2_FILE, stateFile, type Role } from './paths';
 
 /** Log in once per role (login is rate limited to 5/min per account) and keep the cookies as storageState. */
@@ -13,7 +14,11 @@ export default async function globalSetup(): Promise<void> {
     ['student', ACCOUNTS.student.email],
     ['tutor', ACCOUNTS.tutor.email],
     ['tutor2', ACCOUNTS.tutor2.email],
+    ['admin', ADMIN_EMAIL],
   ];
+  const db = new Db();
+  await db.clearMustChangePassword(ADMIN_EMAIL);
+  await db.close();
   for (const [role, email] of roles) {
     const api = await Api.anonymous();
     await api.login(email, password);

@@ -19,14 +19,23 @@ export type SlotStatus = S['SlotStatus'];
 export type BookingStatus = S['BookingStatus'];
 export type TutorBooking = S['TutorBooking'];
 export type TutorBookingPage = S['TutorBookingPage'];
-export type Booking = S['Booking'];
-export type BookingPage = S['BookingPage'];
+export type UserStatus = S['UserStatus'];
+export type PaymentStatus = S['PaymentStatus'];
+export type Payment = S['Payment'];
 export type CheckoutResponse = S['CheckoutResponse'];
 export type SlotDetail = S['SlotDetail'];
 export type Review = S['Review'];
-export type Payment = S['Payment'];
-export type PaymentStatus = S['PaymentStatus'];
 export type ReasonCode = S['ReasonCode'];
+export type Booking = S['Booking'];
+export type BookingPage = S['BookingPage'];
+export type AdminUser = S['AdminUser'];
+export type AdminUserPage = S['AdminUserPage'];
+export type AdminTutor = S['AdminTutor'];
+export type AdminTutorPage = S['AdminTutorPage'];
+export type AdminBookingDetail = S['AdminBookingDetail'];
+export type AuditLog = S['AuditLog'];
+export type AuditLogPage = S['AuditLogPage'];
+export type TutorAction = 'approve' | 'reject' | 'suspend' | 'reinstate';
 export type RegisterRequest = S['RegisterRequest'];
 export type LoginRequest = S['LoginRequest'];
 export type ErrorCode = S['ErrorCode'];
@@ -54,6 +63,46 @@ export interface TutorSearchParams {
 }
 
 export type TeachingScope = 'upcoming' | 'past' | 'cancelled';
+
+export interface AdminStats {
+  pendingTutors: number;
+  bookingsToday: number;
+  confirmedUpcoming: number;
+  refundsFailed: number;
+}
+
+export interface AdminUserParams {
+  role?: UserRole;
+  status?: UserStatus;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AdminTutorParams {
+  approvalStatus?: TutorApprovalStatus;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AdminBookingParams {
+  status?: BookingStatus;
+  tutorId?: string;
+  studentId?: string;
+  from?: string;
+  to?: string;
+  refundFailed?: 'true';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AuditLogParams {
+  entityType?: string;
+  entityId?: string;
+  page?: number;
+  pageSize?: number;
+}
 
 export type StudentScope = 'upcoming' | 'past' | 'cancelled';
 

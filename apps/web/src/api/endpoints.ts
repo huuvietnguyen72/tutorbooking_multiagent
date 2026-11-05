@@ -7,6 +7,20 @@ import type {
   Review,
   SlotDetail,
   StudentScope,
+  AdminBookingDetail,
+  AdminBookingParams,
+  AdminStats,
+  AdminTutor,
+  AdminTutorPage,
+  AdminTutorParams,
+  AdminUser,
+  AdminUserPage,
+  AdminUserParams,
+  AuditLogPage,
+  AuditLogParams,
+  Payment,
+  TutorAction,
+  UserStatus,
   LoginRequest,
   Me,
   PublicConfig,
@@ -99,4 +113,23 @@ export const api = {
     request<MockGatewayPayment>('GET', `/mock-gateway/payments/${encodeURIComponent(paymentId)}`, { signal }),
   completeMockGatewayPayment: (paymentId: string, result: 'SUCCESS' | 'FAILURE') =>
     request<{ redirectUrl: string }>('POST', `/mock-gateway/payments/${encodeURIComponent(paymentId)}/complete`, { body: { result } }),
+  adminStats: (signal?: AbortSignal) => request<AdminStats>('GET', '/admin/stats', { signal }),
+  adminListUsers: (params: AdminUserParams, signal?: AbortSignal) =>
+    request<AdminUserPage>('GET', '/admin/users', { query: { ...params }, signal }),
+  adminSetUserStatus: (userId: string, status: UserStatus, reason?: string) =>
+    request<AdminUser>('PATCH', `/admin/users/${encodeURIComponent(userId)}/status`, { body: { status, ...(reason ? { reason } : {}) } }),
+  adminListTutors: (params: AdminTutorParams, signal?: AbortSignal) =>
+    request<AdminTutorPage>('GET', '/admin/tutors', { query: { ...params }, signal }),
+  adminTutorDecision: (tutorId: string, action: TutorAction, reason?: string) =>
+    request<AdminTutor>('POST', `/admin/tutors/${encodeURIComponent(tutorId)}/${action}`, { body: reason ? { reason } : {} }),
+  adminListBookings: (params: AdminBookingParams, signal?: AbortSignal) =>
+    request<BookingPage>('GET', '/admin/bookings', { query: { ...params }, signal }),
+  adminGetBooking: (bookingId: string, signal?: AbortSignal) =>
+    request<AdminBookingDetail>('GET', `/admin/bookings/${encodeURIComponent(bookingId)}`, { signal }),
+  adminCancelBooking: (bookingId: string, reason: string, refund: boolean) =>
+    request<AdminBookingDetail>('POST', `/admin/bookings/${encodeURIComponent(bookingId)}/cancel`, { body: { reason, refund } }),
+  adminRefundPayment: (paymentId: string, reason: string) =>
+    request<Payment>('POST', `/admin/payments/${encodeURIComponent(paymentId)}/refund`, { body: { reason } }),
+  adminListAuditLogs: (params: AuditLogParams, signal?: AbortSignal) =>
+    request<AuditLogPage>('GET', '/admin/audit-logs', { query: { ...params }, signal }),
 };

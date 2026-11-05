@@ -11,6 +11,7 @@ interface Fixtures {
   student2: Api;
   tutor: Api;
   tutor2: Api;
+  admin: Api;
   db: Db;
   /** Create a unique future slot for a tutor (retries on SLOT_OVERLAP). */
   newSlot: (owner?: Api, opts?: { inHours?: number; startAt?: Date }) => Promise<Slot>;
@@ -43,6 +44,7 @@ export const test = base.extend<Fixtures>({
   student2: async ({}, use) => { const a = await clients('student2'); await use(a); await a.dispose(); },
   tutor: async ({}, use) => { const a = await clients('tutor'); await use(a); await a.dispose(); },
   tutor2: async ({}, use) => { const a = await clients('tutor2'); await use(a); await a.dispose(); },
+  admin: async ({}, use) => { const a = await clients('admin'); await use(a); await a.dispose(); },
   db: async ({}, use) => { const d = new Db(); await use(d); await d.close(); },
 
   newSlot: async ({ tutor }, use) => {

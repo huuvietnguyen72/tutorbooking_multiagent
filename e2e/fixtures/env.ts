@@ -10,6 +10,8 @@ export const MAILPIT_URL = process.env.MAILPIT_URL ?? 'http://localhost:8025';
 /** Seed demo accounts share the SEED_ADMIN_PASSWORD value. */
 export const demoPassword = (): string => process.env.E2E_DEMO_PASSWORD ?? required('SEED_ADMIN_PASSWORD');
 
+export const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@tutor.local';
+
 export const ACCOUNTS = {
   student: { email: 'hoc-vien@demo.local', fullName: 'Lê Học Viên' },
   tutor: { email: 'gia-su-toan@demo.local', fullName: 'Nguyễn Văn An', priceVnd: 200_000 },

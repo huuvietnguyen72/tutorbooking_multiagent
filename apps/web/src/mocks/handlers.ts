@@ -12,6 +12,7 @@ import type {
 } from '../api/types';
 import { dayKey } from '../lib/time';
 import { isSlotTaken, resetStudentState, studentHandlers } from './studentHandlers';
+import { createAdminHandlers, resetAdminState } from './adminHandlers';
 import { reviews, subjects, tutors, users, type MockUser } from './data';
 
 /** Handlers follow docs/openapi.yaml (servers: /api/v1). In-memory session state resets via `resetMockState`. */
@@ -32,6 +33,7 @@ export function resetMockState(): void {
   registered = [];
   tutorStates = new Map();
   resetStudentState();
+  resetAdminState();
   for (const u of users) {
     if (u.id === 'u-admin') u.mustChangePassword = true;
   }
@@ -310,6 +312,7 @@ const tutorHandlers = [
 export const handlers = [
   ...tutorHandlers,
   ...studentHandlers({ currentUser, error, slotsFor }),
+  ...createAdminHandlers({ currentUser, allUsers }),
   http.get(`${BASE}/config/public`, () =>
     HttpResponse.json({
       cancellationWindowHours: 24,

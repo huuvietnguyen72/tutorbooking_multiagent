@@ -8,6 +8,12 @@ import { databaseUrl } from './env';
 export class Db {
   private readonly pool = new Pool({ connectionString: databaseUrl(), max: 2 });
 
+  /** The seeded admin must change the password before using the API; the throwaway test database skips that step. */
+  async clearMustChangePassword(email: string): Promise<void> {
+    const res = await this.pool.query(`UPDATE users SET must_change_password = false WHERE email = $1 AND role = 'ADMIN'`, [email.toLowerCase()]);
+    if (res.rowCount !== 1) throw new Error(`clearMustChangePassword: no admin ${email}`);
+  }
+
   async expireHold(bookingId: string): Promise<void> {
     const res = await this.pool.query(
       `UPDATE bookings SET hold_expires_at = now() - interval '1 minute' WHERE id = $1 AND status = 'PENDING_PAYMENT'`,
