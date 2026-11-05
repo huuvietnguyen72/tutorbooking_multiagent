@@ -280,7 +280,7 @@ describe('reschedule (S-13)', () => {
     const slotButtons = () =>
       within(screen.getByRole('main')).queryAllByRole('button').filter((b) => /^\d\d:\d\d–\d\d:\d\d$/.test(b.textContent ?? '') && !(b as HTMLButtonElement).disabled);
     for (let i = 0; i < 4 && slotButtons().length === 0; i += 1) {
-      await user.click(await screen.findByRole('button', { name: 'Tuần sau', exact: true }));
+      await user.click(await screen.findByRole('button', { name: /^Tuần sau$/ }));
       await waitFor(() => expect(document.querySelector('section .ant-skeleton')).not.toBeInTheDocument());
     }
     await waitFor(() => expect(slotButtons().length).toBeGreaterThan(0));
