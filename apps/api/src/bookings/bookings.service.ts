@@ -151,6 +151,10 @@ export class BookingsService {
 
   private async createInTx(tx: Tx, studentId: string, slotId: string, idempotencyKey?: string): Promise<StudentBookingRow> {
     const now = this.clock.now();
+    // One booking insert per student at a time: two parallel inserts racing on the
+    // `bookings_student_no_overlap` exclusion constraint deadlock each other (40P01 -> 500).
+    // Taken before any row lock, so it cannot invert the booking -> slot lock order.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${studentId}, 0))`;
     const [slot] = await tx.$queryRaw<SlotRow[]>`
       SELECT id, tutor_id AS "tutorId", start_at AS "startAt", end_at AS "endAt", status, deleted_at AS "deletedAt"
       FROM slots WHERE id = ${slotId}::uuid FOR UPDATE`;
