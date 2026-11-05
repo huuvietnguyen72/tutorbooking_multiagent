@@ -21,6 +21,12 @@ export interface Actor {
 export const SYSTEM: Actor = { type: 'SYSTEM', id: null };
 export const PROVIDER: Actor = { type: 'PROVIDER', id: null };
 
+const CANCELLED_STATUS = {
+  STUDENT: 'CANCELLED_BY_STUDENT',
+  TUTOR: 'CANCELLED_BY_TUTOR',
+  ADMIN: 'CANCELLED_BY_ADMIN',
+} as const satisfies Record<string, BookingStatus>;
+
 export type PaymentFailure = 'HOLD_EXPIRED' | 'DECLINED' | 'CANCELLED_BY_STUDENT';
 
 /**
@@ -124,17 +130,18 @@ export class BookingStateMachine {
   }
 
   /**
-   * CONFIRMED -> CANCELLED_BY_STUDENT | CANCELLED_BY_TUTOR with a 100% refund.
-   * Student frees the slot; tutor closes it (A6).
+   * CONFIRMED -> CANCELLED_BY_STUDENT | CANCELLED_BY_TUTOR | CANCELLED_BY_ADMIN, refund 100% unless
+   * the admin opted out. Student frees the slot; tutor and admin close it (A6).
    */
   async cancelConfirmed(
     tx: Tx,
     booking: BookingWithParties,
-    by: 'STUDENT' | 'TUTOR',
+    by: 'STUDENT' | 'TUTOR' | 'ADMIN',
     actorId: string,
     reason: string | null,
+    options: { refund?: boolean } = {},
   ): Promise<BookingWithParties> {
-    const to: BookingStatus = by === 'STUDENT' ? 'CANCELLED_BY_STUDENT' : 'CANCELLED_BY_TUTOR';
+    const to: BookingStatus = CANCELLED_STATUS[by];
     await this.lockSlots(tx, [booking.slotId]);
     await tx.booking.update({
       where: { id: booking.id },
@@ -142,9 +149,51 @@ export class BookingStateMachine {
     });
     await tx.slot.update({ where: { id: booking.slotId }, data: { status: by === 'STUDENT' ? 'AVAILABLE' : 'CLOSED' } });
     await this.history(tx, booking, to, { type: 'USER', id: actorId }, reason ?? undefined);
-    if (booking.payment?.status === 'PAID') await this.refund(tx, booking.payment, `${to}`);
+    if (booking.payment?.status === 'PAID' && options.refund !== false) await this.refund(tx, booking.payment, `${to}`);
     const next = await this.reload(tx, booking.id);
-    await this.enqueue(tx, next, 'booking_cancelled', ['student', 'tutor'], { cancelledBy: by });
+    await this.enqueue(tx, next, 'booking_cancelled', ['student', 'tutor'], {
+      cancelledBy: by,
+      refunded: next.payment?.status === 'REFUNDED',
+      reason: reason ?? undefined,
+    });
+    return next;
+  }
+
+  /**
+   * CONFIRMED -> CONFIRMED on another slot of the same tutor (§2.5). The booking is locked and both
+   * slots are taken in ascending id order, so a failure anywhere rolls the caller's transaction back
+   * and the booking keeps its old slot (AC5). The caller has already validated the target slot.
+   */
+  async reschedule(
+    tx: Tx,
+    booking: BookingWithParties,
+    target: { id: string; startAt: Date; endAt: Date },
+    actorId: string,
+  ): Promise<BookingWithParties> {
+    await this.lockSlots(tx, [booking.slotId, target.id]);
+    await tx.booking.update({
+      where: { id: booking.id },
+      data: { slotId: target.id, startAt: target.startAt, endAt: target.endAt, rescheduleCount: { increment: 1 } },
+    });
+    await tx.slot.update({ where: { id: booking.slotId }, data: { status: 'AVAILABLE' } });
+    await tx.slot.update({ where: { id: target.id }, data: { status: 'BOOKED' } });
+    await tx.bookingHistory.create({
+      data: {
+        bookingId: booking.id,
+        fromStatus: 'CONFIRMED',
+        toStatus: 'CONFIRMED',
+        fromSlotId: booking.slotId,
+        toSlotId: target.id,
+        actorId,
+        actorType: 'USER',
+        note: 'RESCHEDULED',
+      },
+    });
+    const next = await this.reload(tx, booking.id);
+    await this.enqueue(tx, next, 'booking_rescheduled', ['student', 'tutor'], {
+      oldStartAt: booking.startAt.toISOString(),
+      oldEndAt: booking.endAt.toISOString(),
+    });
     return next;
   }
 
@@ -180,30 +229,36 @@ export class BookingStateMachine {
     return (await this.load(tx, id))!;
   }
 
-  /** Transactional outbox (§2.6): rows are written with the state change; the worker ships them (T5). */
+  /** Transactional outbox (§2.6): rows are written with the state change; `MailOutboxWorker` ships them. */
   async enqueue(
     tx: Tx,
     booking: BookingWithParties,
-    template: 'booking_confirmed' | 'booking_cancelled',
+    template: 'booking_confirmed' | 'booking_cancelled' | 'booking_rescheduled',
     to: ('student' | 'tutor')[],
     extra: Record<string, unknown> = {},
   ): Promise<void> {
     for (const role of to) {
       const party = role === 'student' ? booking.student : booking.tutor;
+      const { reason, ...shared } = extra;
+      // A student's own cancel reason is private to them (Security A1); tutor/admin reasons reach both sides.
+      const showReason = reason !== undefined && !(role === 'tutor' && extra.cancelledBy === 'STUDENT');
       await tx.emailOutbox.create({
         data: {
           toEmail: party.email,
           template: `${template}_${role}`,
-          payload: {
-            bookingId: booking.id,
-            bookingCode: formatBookingCode(booking.code),
-            startAt: booking.startAt.toISOString(),
-            endAt: booking.endAt.toISOString(),
-            priceVnd: booking.priceVnd,
-            studentName: booking.student.fullName,
-            tutorName: booking.tutor.fullName,
-            ...extra,
-          },
+          payload: JSON.parse(
+            JSON.stringify({
+              bookingId: booking.id,
+              bookingCode: formatBookingCode(booking.code),
+              startAt: booking.startAt.toISOString(),
+              endAt: booking.endAt.toISOString(),
+              priceVnd: booking.priceVnd,
+              studentName: booking.student.fullName,
+              tutorName: booking.tutor.fullName,
+              ...shared,
+              ...(showReason ? { reason } : {}),
+            }),
+          ),
         },
       });
     }

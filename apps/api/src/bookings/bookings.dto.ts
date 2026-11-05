@@ -24,6 +24,8 @@ export const createBookingSchema = z.object({ slotId: z.uuid() }).strict();
 
 export const studentCancelSchema = z.object({ reason: z.string().trim().min(1).max(500).optional() }).strict();
 
+export const rescheduleSchema = z.object({ newSlotId: z.uuid() }).strict();
+
 export const reasonSchema = z.object({ reason: z.string().trim().min(1).max(500) }).strict();
 
 export const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9._:-]{1,64}$/);
@@ -34,7 +36,7 @@ interface ActionFlagDto {
   reasonCode: string | null;
 }
 
-const flag = (decision: Decision<unknown>): ActionFlagDto =>
+export const flag = (decision: Decision<unknown>): ActionFlagDto =>
   decision.allowed ? { allowed: true, reasonCode: null } : { allowed: false, reasonCode: decision.code };
 
 export interface PaymentDto {

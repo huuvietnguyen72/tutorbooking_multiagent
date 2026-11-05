@@ -8,6 +8,8 @@ import { MockPaymentProvider } from '../payments/mock-payment-provider';
 import { PAYMENT_PROVIDER, PaymentProvider } from '../payments/payment-provider';
 import { MockGatewayController, PaymentWebhookController } from '../payments/payments.controller';
 import { PaymentsService } from '../payments/payments.service';
+import { ReviewsController } from '../reviews/reviews.controller';
+import { ReviewsService } from '../reviews/reviews.service';
 import { BookingExpiryService } from './booking-expiry.service';
 import { BookingStateMachine } from './booking-state-machine';
 import { BookingsController, TutorBookingsController } from './bookings.controller';
@@ -21,6 +23,7 @@ import { PublicConfigController } from './config.controller';
     MockGatewayController,
     PaymentWebhookController,
     PublicConfigController,
+    ReviewsController,
   ],
   providers: [
     {
@@ -35,10 +38,11 @@ import { PublicConfigController } from './config.controller';
     BookingExpiryService,
     BookingsService,
     PaymentsService,
+    ReviewsService,
     MockGatewayService,
     MockGatewayEnabledMiddleware,
   ],
-  exports: [BookingStateMachine, BookingExpiryService],
+  exports: [BookingStateMachine, BookingExpiryService, ReviewsService],
 })
 export class BookingsModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
