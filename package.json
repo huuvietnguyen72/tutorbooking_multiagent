@@ -16,7 +16,7 @@
     "test": "npm run test:unit --workspace @tutor/api && npm run test:e2e --workspace @tutor/api && npm run test --workspace @tutor/web",
     "dev:api": "npm run start:dev --workspace @tutor/api",
     "dev:web": "npm run dev --workspace @tutor/web",
-    "e2e": "npm run e2e --workspace @tutor/e2e"
+    "e2e": "npm run e2e --workspace @tutor/e2e --"
   },
   "devDependencies": {
     "@eslint/js": "9.17.0",

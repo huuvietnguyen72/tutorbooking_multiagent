@@ -41,7 +41,7 @@ test.describe('Đặt lịch và thanh toán', () => {
     expect(paid.payment.status).toBe('PAID');
 
     await page.goto('/lich-cua-toi');
-    await expect(page.getByText('Đã xác nhận')).toBeVisible();
+    await expect(page.getByText('Đã xác nhận').first()).toBeVisible();
     await expect(page.getByText(vnRange(slot.startAt, slot.endAt)).first()).toBeVisible();
 
     const mails = await waitForMails(code, 'thành công', 2);
@@ -130,7 +130,7 @@ test.describe('Đặt lịch và thanh toán', () => {
 
     // Come back from "Lịch của tôi" to the pending booking.
     await page.goto('/lich-cua-toi');
-    await page.getByRole('link', { name: 'Thanh toán' }).first().click();
+    await page.locator(`a[href="/thanh-toan/${booking.id}"]`).click();
     await page.waitForURL(new RegExp(`/thanh-toan/${booking.id}$`));
     const left = await holdSeconds(page);
     expect(left).toBeGreaterThan(0);
