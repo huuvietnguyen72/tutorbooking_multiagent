@@ -43,7 +43,8 @@ describe('tutor area access', () => {
     await router.navigate('/gia-su/buoi-day');
     await waitFor(() => expect(router.state.location.pathname).toBe('/gia-su/trang-thai'));
     await router.navigate('/gia-su/ho-so-cua-toi');
-    expect(await screen.findByLabelText('Họ và tên')).toHaveValue('Trần Thị B');
+    await screen.findByLabelText('Họ và tên');
+    await waitFor(() => expect(screen.getByLabelText('Họ và tên')).toHaveValue('Trần Thị B'));
   });
 
   it('disables the menu entries that need approval, with a hint', async () => {
