@@ -72,11 +72,22 @@ describe('authorization matrix from docs/openapi.yaml (TC-AUTH-09)', () => {
     expect(guarded.length).toBeGreaterThanOrEqual(30);
   });
 
+  // login-email is limited to 10/hour per address, so log in once per role and reuse the session.
+  const sessions: Partial<Record<Role, string>> = {};
+  const cookieFor = async (op: Op, role: Role): Promise<string> => {
+    if (op.path === '/auth/logout') {
+      // Logout destroys the session; use a throwaway user so the shared cookie stays valid.
+      const f = fixtures(t);
+      const user = role === 'TUTOR' ? await f.addTutor() : await f.addUser(role);
+      return loginCookie(t.app, user.email);
+    }
+    return (sessions[role] ??= await loginCookie(t.app, users[role].email));
+  };
+
   it.each(guarded.map((o) => [`${o.method.toUpperCase()} ${o.path}`, o] as const))('%s: anonymous 401, disallowed roles 403, allowed roles never 401/403', async (_name, op) => {
     expect((await call(op)).status).toBe(401);
     for (const role of ['STUDENT', 'TUTOR', 'ADMIN'] as Role[]) {
-      // Fresh session per call: POST /auth/logout (and similar) invalidate the cookie, which would turn later calls anonymous.
-      const status = (await call(op, await loginCookie(t.app, users[role].email))).status;
+      const status = (await call(op, await cookieFor(op, role))).status;
       if (op.roles.includes(role)) expect([401, 403]).not.toContain(status);
       else expect(status).toBe(403);
     }
