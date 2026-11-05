@@ -47,13 +47,15 @@ export const test = base.extend<Fixtures>({
 
   newSlot: async ({ tutor }, use) => {
     await use(async (owner = tutor, opts = {}) => {
+      let lastConflict: unknown;
       for (let attempt = 0; attempt < 5; attempt++) {
         const startAt = opts.startAt ?? (opts.inHours === undefined ? randomStart() : new Date(Date.now() + opts.inHours * 3_600_000 - attempt * 61 * 60_000));
         const res = await owner.send<Slot[]>('post', '/tutor/slots', { startTimes: [startAt.toISOString()] });
         if (res.status === 201) return res.body[0];
+        lastConflict = res.body;
         if (res.status !== 409) throw new Error(`createSlot -> ${res.status} ${JSON.stringify(res.body)}`);
       }
-      throw new Error('createSlot: could not find a free time after 5 attempts');
+      throw new Error(`createSlot: could not find a free time after 5 attempts: ${JSON.stringify(lastConflict)}`);
     });
   },
 

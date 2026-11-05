@@ -16,6 +16,34 @@ export class Db {
     if (res.rowCount !== 1) throw new Error(`expireHold: booking ${bookingId} is not a live PENDING_PAYMENT hold`);
   }
 
+  /** Move this paid lesson and its slot together into a unique past interval (PA2). */
+  async finishLesson(bookingId: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const lesson = await client.query(
+        `SELECT slot_id, start_at, end_at FROM bookings
+         WHERE id = $1 AND status = 'CONFIRMED' FOR UPDATE`, [bookingId],
+      );
+      if (lesson.rowCount !== 1) throw new Error(`finishLesson: ${bookingId} is not CONFIRMED`);
+      // Preserve the randomly allocated interval and duration, shifting it 800 days back.
+      await client.query(
+        `UPDATE slots SET start_at = start_at - interval '800 days', end_at = end_at - interval '800 days'
+         WHERE id = $1`, [lesson.rows[0].slot_id],
+      );
+      await client.query(
+        `UPDATE bookings SET start_at = start_at - interval '800 days', end_at = end_at - interval '800 days'
+         WHERE id = $1`, [bookingId],
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async close(): Promise<void> {
     await this.pool.end();
   }

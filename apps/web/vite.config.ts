@@ -17,6 +17,8 @@ export default defineConfig({
     globals: false,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Keep the antd/jsdom suites from competing for CPU on small CI runners.
+    maxWorkers: 1,
     // antd + jsdom is slow on first render
     testTimeout: 20000,
   },

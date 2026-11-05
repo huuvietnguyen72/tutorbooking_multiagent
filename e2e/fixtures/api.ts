@@ -11,6 +11,8 @@ export interface Booking {
   priceVnd: number;
   holdExpiresAt: string | null;
   rescheduleCount: number;
+  tutor: { id: string; fullName: string };
+  review: { rating: number; comment: string | null } | null;
   payment: { id?: string; status: string; amountVnd: number; failureReason?: string | null };
   actions?: { cancel: { allowed: boolean; reasonCode?: string | null } };
 }
