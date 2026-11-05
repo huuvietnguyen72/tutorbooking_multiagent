@@ -34,8 +34,17 @@ export function fixtures(t: TestApp) {
   };
 
   /** Slot starting `inMs` after the fake clock's now, rounded up to the hour. */
-  const addSlot = (tutorId: string, inMs = 48 * HOUR, opts: { status?: 'AVAILABLE' | 'BOOKED' | 'CLOSED'; durationMs?: number } = {}) => {
-    const startAt = new Date(Math.ceil((t.clock.now().getTime() + inMs) / HOUR) * HOUR);
+  const addSlot = async (tutorId: string, inMs = 48 * HOUR, opts: { status?: 'AVAILABLE' | 'BOOKED' | 'CLOSED'; durationMs?: number; exact?: boolean } = {}) => {
+    const durationMs = opts.durationMs ?? HOUR;
+    const at = t.clock.now().getTime() + inMs;
+    let startAt = new Date(opts.exact ? Math.floor(at / MIN) * MIN : Math.ceil(at / HOUR) * HOUR);
+    // slots_no_overlap: step away (further from now) while this tutor already has a slot there.
+    for (;;) {
+      const endAt = new Date(startAt.getTime() + durationMs);
+      const clash = await t.prisma.slot.findFirst({ where: { tutorId, startAt: { lt: endAt }, endAt: { gt: startAt } } });
+      if (!clash) break;
+      startAt = new Date(startAt.getTime() + (inMs < 0 ? -HOUR : HOUR));
+    }
     return t.prisma.slot.create({
       data: { tutorId, startAt, endAt: new Date(startAt.getTime() + (opts.durationMs ?? HOUR)), status: opts.status ?? 'AVAILABLE' },
     });

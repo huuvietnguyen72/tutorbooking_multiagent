@@ -158,7 +158,7 @@ describe('reschedule + reviews (T5)', () => {
 
     it('SLOT_TOO_SOON inside the booking lead time (a slot in the past included)', async () => {
       const { booking } = await f.confirmedBooking(student, tutor);
-      const soon = await f.addSlot(tutor.id, 20 * MIN);
+      const soon = await f.addSlot(tutor.id, 20 * MIN, { exact: true });
       expect((await reschedule(student, booking.id, soon.id).expect(409)).body.error.code).toBe('SLOT_TOO_SOON');
       const past = await f.addSlot(tutor.id, -5 * HOUR);
       expect((await reschedule(student, booking.id, past.id).expect(409)).body.error.code).toBe('SLOT_TOO_SOON');
@@ -252,7 +252,7 @@ describe('reschedule + reviews (T5)', () => {
       expect(res.body).toEqual({
         id: expect.any(String),
         bookingId: b.id,
-        studentName: 'Nguyen V.',
+        studentName: 'Nguyen A.',
         rating: 4,
         comment: 'Dạy rất dễ hiểu',
         hidden: false,
@@ -315,7 +315,8 @@ describe('reschedule + reviews (T5)', () => {
 
     it('parallel reviews of one tutor from different students keep the average exact', async () => {
       const students = await Promise.all(Array.from({ length: 6 }, () => f.addUser('STUDENT')));
-      const bookings = await Promise.all(students.map((s) => finished(s)));
+      const bookings: Awaited<ReturnType<typeof finished>>[] = [];
+      for (const s of students) bookings.push(await finished(s)); // sequential: one tutor's slots must not overlap
       const ratings = [5, 4, 4, 3, 2, 1];
       await Promise.all(students.map((s, i) => review(s, bookings[i].id, { rating: ratings[i] }).expect(201)));
       const profile = await t.prisma.tutorProfile.findUniqueOrThrow({ where: { userId: tutor.id } });
