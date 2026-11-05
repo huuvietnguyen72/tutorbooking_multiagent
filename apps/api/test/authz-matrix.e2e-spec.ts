@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import request from 'supertest';
 import { fixtures, UUID0, User } from './fixtures';
-import { API, createTestApp, ORIGIN, randomIp, resetDb, TestApp } from './helpers';
+import { API, createTestApp, loginCookie, ORIGIN, randomIp, resetDb, TestApp } from './helpers';
 
 type Role = 'STUDENT' | 'TUTOR' | 'ADMIN';
 interface Op {
@@ -52,7 +52,10 @@ describe('authorization matrix from docs/openapi.yaml (TC-AUTH-09)', () => {
 
   const call = (op: Op, cookie?: string) => {
     const req = request(t.app.getHttpServer())[op.method](`${API}${concrete(op.path)}`).set('Origin', ORIGIN).set('X-Forwarded-For', randomIp());
-    return (cookie ? req.set('Cookie', cookie) : req).send(op.method === 'get' || op.method === 'delete' ? undefined : {});
+    const authed = cookie ? req.set('Cookie', cookie) : req;
+    if (op.method === 'get' || op.method === 'delete') return authed;
+    // OriginGuard runs before auth and demands multipart for upload routes, so send a multipart body there.
+    return op.path.endsWith('/avatar') ? authed.field('probe', '1') : authed.send({});
   };
 
   beforeAll(async () => {
@@ -72,7 +75,8 @@ describe('authorization matrix from docs/openapi.yaml (TC-AUTH-09)', () => {
   it.each(guarded.map((o) => [`${o.method.toUpperCase()} ${o.path}`, o] as const))('%s: anonymous 401, disallowed roles 403, allowed roles never 401/403', async (_name, op) => {
     expect((await call(op)).status).toBe(401);
     for (const role of ['STUDENT', 'TUTOR', 'ADMIN'] as Role[]) {
-      const status = (await call(op, users[role].cookie)).status;
+      // Fresh session per call: POST /auth/logout (and similar) invalidate the cookie, which would turn later calls anonymous.
+      const status = (await call(op, await loginCookie(t.app, users[role].email))).status;
       if (op.roles.includes(role)) expect([401, 403]).not.toContain(status);
       else expect(status).toBe(403);
     }
