@@ -153,6 +153,7 @@ export class BookingStateMachine {
    * payment PAID with `refund_failed` so Admin can retry by hand (§2.5).
    */
   async refund(tx: Tx, payment: Payment, reason: string, refundedBy: string | null = null): Promise<boolean> {
+    // TODO(VNPay): the provider call runs inside the caller's transaction; fine for Mock, move it out before a real provider.
     const now = this.clock.now();
     await tx.payment.update({ where: { id: payment.id }, data: { refundRequestedAt: now } });
     try {
