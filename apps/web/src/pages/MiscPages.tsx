@@ -1,7 +1,7 @@
-import { Alert, Button, Result, Typography } from 'antd';
+import { Alert, Button, Result, Space, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { useMe } from '../api/hooks';
+import { useMe, useMyProfile } from '../api/hooks';
 import { ROUTES } from '../auth/routes';
 import { StatusPage } from '../components/States';
 
@@ -57,14 +57,33 @@ export function TutorGatePage() {
   const { t } = useTranslation();
   const { data: me } = useMe();
   const status = me?.tutorApprovalStatus ?? 'PENDING_APPROVAL';
+  const profile = useMyProfile();
+  const reason = status === 'REJECTED' ? profile.data?.rejectionReason : null;
+  const type = status === 'APPROVED' ? 'success' : status === 'PENDING_APPROVAL' ? 'info' : status === 'REJECTED' ? 'error' : 'warning';
   return (
     <div style={{ maxWidth: 560, margin: '0 auto' }}>
       <Typography.Title level={3}>{t('tutorGate.title')}</Typography.Title>
       <Alert
-        type={status === 'APPROVED' ? 'success' : status === 'PENDING_APPROVAL' ? 'info' : 'warning'}
+        type={type}
         showIcon
         message={t(`tutorGate.${status}`)}
+        description={
+          <>
+            {reason ? <p>{t('tutorGate.reasonLabel')} “{reason}”</p> : null}
+            {status === 'PENDING_APPROVAL' ? <p>{t('tutorGate.pendingHint')}</p> : null}
+            {status === 'SUSPENDED' ? <p>{t('tutorGate.suspendedHint')}</p> : null}
+          </>
+        }
       />
+      <Space style={{ marginTop: 16 }}>
+        {status === 'SUSPENDED' ? (
+          <Link to={ROUTES.tutorSessions}><Button type="primary">{t('tutorGate.viewSessions')}</Button></Link>
+        ) : (
+          <Link to={ROUTES.tutorProfile}>
+            <Button type="primary">{status === 'REJECTED' ? t('tutorGate.editResubmit') : t('tutorGate.editProfile')}</Button>
+          </Link>
+        )}
+      </Space>
     </div>
   );
 }

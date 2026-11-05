@@ -14,13 +14,16 @@ import { formatVnd } from '../lib/format';
 import { addDaysIso, formatDate, startOfWeekIso } from '../lib/time';
 
 const REVIEW_STEP = 5;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function TutorDetailPage() {
   const { t } = useTranslation();
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const slotParam = searchParams.get('slot');
+  const slotRaw = searchParams.get('slot');
+  // Ignore malformed values so a crafted link cannot navigate to an arbitrary booking URL.
+  const slotParam = slotRaw && UUID_RE.test(slotRaw) ? slotRaw : null;
   const { data: me } = useMe();
   const tutor = useTutor(id);
 

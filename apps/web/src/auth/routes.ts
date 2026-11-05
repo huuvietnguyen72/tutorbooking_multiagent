@@ -17,6 +17,7 @@ export const ROUTES = {
   tutorProfile: '/gia-su/ho-so-cua-toi',
   tutorSlots: '/gia-su/lich-trong',
   tutorSessions: '/gia-su/buoi-day',
+  tutorSession: (bookingId: string) => `/gia-su/buoi-day/${bookingId}`,
   tutorReviews: '/gia-su/danh-gia',
   admin: '/admin',
   adminTutors: '/admin/gia-su-cho-duyet',

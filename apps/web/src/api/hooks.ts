@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { api } from './endpoints';
 import { ApiError } from './client';
 import { ME_KEY } from './queryClient';
-import type { Me, RegisterRequest, TutorSearchParams } from './types';
+import type { Me, RegisterRequest, TeachingScope, TutorProfileInput, TutorSearchParams } from './types';
 
 /** `null` = not logged in. */
 export function useMe() {
@@ -102,5 +102,86 @@ export function useTutorReviews(tutorId: string, page: number, pageSize = 5) {
   return useQuery({
     queryKey: ['tutor', tutorId, 'reviews', page, pageSize],
     queryFn: ({ signal }) => api.listTutorReviews(tutorId, page, pageSize, signal),
+  });
+}
+
+// ---- tutor self-service (T7). All keys start with 'my' so they never collide with the public 'tutor' keys. ----
+
+export function useMyProfile() {
+  return useQuery({
+    queryKey: ['my', 'profile'],
+    queryFn: ({ signal }) => api.getMyTutorProfile(signal),
+  });
+}
+
+/** Saving or resubmitting changes `approvalStatus`, which `useMe` mirrors, so refresh both. */
+function useProfileMutation<V>(mutationFn: (values: V) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['my', 'profile'] });
+      void qc.invalidateQueries({ queryKey: ME_KEY });
+    },
+  });
+}
+
+export const useSaveProfile = () => useProfileMutation((body: TutorProfileInput) => api.updateMyTutorProfile(body));
+export const useResubmitProfile = () => useProfileMutation(() => api.resubmitTutorProfile());
+export const useUploadAvatar = () => useProfileMutation((file: File) => api.uploadAvatar(file));
+
+export function useMySlots(from: string, to: string) {
+  return useQuery({
+    queryKey: ['my', 'slots', from, to],
+    queryFn: ({ signal }) => api.listMySlots(from, to, signal),
+  });
+}
+
+function useSlotMutation<V, R>(mutationFn: (values: V) => Promise<R>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my', 'slots'] }),
+  });
+}
+
+export const useCreateSlots = () => useSlotMutation((startTimes: string[]) => api.createSlots(startTimes));
+export const useMoveSlot = () =>
+  useSlotMutation((v: { slotId: string; startAt: string }) => api.moveSlot(v.slotId, v.startAt));
+export const useDeleteSlot = () => useSlotMutation((slotId: string) => api.deleteSlot(slotId));
+export const useReopenSlot = () => useSlotMutation((slotId: string) => api.reopenSlot(slotId));
+
+export function useMyTeachingBookings(scope: TeachingScope, page: number, pageSize = 10) {
+  return useQuery({
+    queryKey: ['my', 'bookings', scope, page, pageSize],
+    queryFn: ({ signal }) => api.listMyTeachingBookings(scope, page, pageSize, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useMyTeachingBooking(bookingId: string) {
+  return useQuery({
+    queryKey: ['my', 'booking', bookingId],
+    queryFn: ({ signal }) => api.getMyTeachingBooking(bookingId, signal),
+  });
+}
+
+export function useTutorCancelBooking(bookingId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) => api.tutorCancelBooking(bookingId, reason),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['my', 'bookings'] });
+      void qc.invalidateQueries({ queryKey: ['my', 'booking', bookingId] });
+      void qc.invalidateQueries({ queryKey: ['my', 'slots'] });
+    },
+  });
+}
+
+export function useMyReviews(page: number, pageSize = 10) {
+  return useQuery({
+    queryKey: ['my', 'reviews', page, pageSize],
+    queryFn: ({ signal }) => api.listMyReviews(page, pageSize, signal),
+    placeholderData: keepPreviousData,
   });
 }

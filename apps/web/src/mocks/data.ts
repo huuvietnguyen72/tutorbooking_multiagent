@@ -43,6 +43,9 @@ export interface MockUser extends Me {
 export const users: MockUser[] = [
   { id: 'u-student', email: 'hocvien@example.test', password: 'mock-pass-1234', fullName: 'Nguyễn A', role: 'STUDENT', status: 'ACTIVE' },
   { id: 'u-tutor', email: 'giasu@example.test', password: 'mock-pass-1234', fullName: 'Trần Thị B', role: 'TUTOR', status: 'ACTIVE', tutorApprovalStatus: 'PENDING_APPROVAL' },
+  { id: 'u-tutor-ok', email: 'giasu-duyet@example.test', password: 'mock-pass-1234', fullName: 'Lê Hoàng Cường', role: 'TUTOR', status: 'ACTIVE', tutorApprovalStatus: 'APPROVED' },
+  { id: 'u-tutor-rej', email: 'giasu-tuchoi@example.test', password: 'mock-pass-1234', fullName: 'Phạm Minh Dũng', role: 'TUTOR', status: 'ACTIVE', tutorApprovalStatus: 'REJECTED' },
+  { id: 'u-tutor-sus', email: 'giasu-tamngung@example.test', password: 'mock-pass-1234', fullName: 'Hoàng Thu Hà', role: 'TUTOR', status: 'ACTIVE', tutorApprovalStatus: 'SUSPENDED' },
   { id: 'u-admin', email: 'admin@example.test', password: 'mock-pass-1234', fullName: 'Quản trị', role: 'ADMIN', status: 'ACTIVE', mustChangePassword: true },
   { id: 'u-locked', email: 'khoa@example.test', password: 'mock-pass-1234', fullName: 'Bị khoá', role: 'STUDENT', status: 'LOCKED' },
 ];

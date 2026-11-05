@@ -12,6 +12,13 @@ export type TutorSummaryPage = S['TutorSummaryPage'];
 export type PublicSlot = S['PublicSlot'];
 export type PublicReview = S['PublicReview'];
 export type PublicReviewPage = S['PublicReviewPage'];
+export type TutorOwnProfile = S['TutorOwnProfile'];
+export type TutorProfileInput = S['TutorProfileInput'];
+export type TutorSlot = S['TutorSlot'];
+export type SlotStatus = S['SlotStatus'];
+export type BookingStatus = S['BookingStatus'];
+export type TutorBooking = S['TutorBooking'];
+export type TutorBookingPage = S['TutorBookingPage'];
 export type RegisterRequest = S['RegisterRequest'];
 export type LoginRequest = S['LoginRequest'];
 export type ErrorCode = S['ErrorCode'];
@@ -37,3 +44,5 @@ export interface TutorSearchParams {
   page?: number;
   pageSize?: number;
 }
+
+export type TeachingScope = 'upcoming' | 'past' | 'cancelled';

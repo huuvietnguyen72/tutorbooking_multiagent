@@ -58,13 +58,15 @@ export async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   const hasBody = options.body !== undefined;
+  const isForm = options.body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(buildUrl(path, options.query), {
       method,
       credentials: 'same-origin',
-      headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
-      body: hasBody ? JSON.stringify(options.body) : undefined,
+      // For FormData the browser sets the multipart boundary itself.
+      headers: hasBody && !isForm ? { 'Content-Type': 'application/json' } : undefined,
+      body: hasBody ? (isForm ? (options.body as FormData) : JSON.stringify(options.body)) : undefined,
       signal: options.signal,
     });
   } catch (err) {
