@@ -34,6 +34,8 @@ PAYMENT_WEBHOOK_SECRET=$(gen_hex)
 SEED_ADMIN_PASSWORD=$(gen_password)
 SEED_DEMO_DATA=true
 APP_BASE_URL=http://localhost:8080
+# Demo only: the mock payment gateway (S-08). Defaults to off when NODE_ENV=production.
+MOCK_GATEWAY_ENABLED=true
 EOF
 
 chmod 600 .env

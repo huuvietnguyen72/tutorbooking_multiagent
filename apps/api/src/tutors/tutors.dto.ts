@@ -22,7 +22,10 @@ export const searchTutorsSchema = z.object({
   availableDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)))
+    .refine((value) => {
+      const d = new Date(`${value}T00:00:00Z`);
+      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+    })
     .optional(),
   q: z.string().trim().max(100).optional(),
   sort: z.enum(['rating_desc', 'price_asc', 'price_desc']).default('rating_desc'),

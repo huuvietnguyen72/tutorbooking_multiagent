@@ -9,3 +9,4 @@ process.env.PAYMENT_WEBHOOK_SECRET ??= rand();
 process.env.SEED_ADMIN_PASSWORD ??= rand(12);
 process.env.SEED_DEMO_DATA ??= 'false';
 process.env.APP_BASE_URL ??= 'http://localhost:8080';
+process.env.EXPIRY_JOB_INTERVAL_SECONDS ??= '0'; // tests drive the expiry job by hand

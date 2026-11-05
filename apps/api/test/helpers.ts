@@ -1,4 +1,6 @@
 import { randomBytes, randomInt } from 'node:crypto';
+import { createServer } from 'node:net';
+import type { AddressInfo } from 'node:net';
 import { Controller, Get, HttpCode, INestApplication, Post } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
@@ -48,8 +50,30 @@ export interface TestApp {
   close(): Promise<void>;
 }
 
-export async function createTestApp(): Promise<TestApp> {
+export interface TestAppOptions {
+  /** Bind a real port and point the mock gateway's webhook dispatch at it. */
+  listen?: boolean;
+  /** Extra env for this app only (read when the module compiles). */
+  env?: Record<string, string>;
+}
+
+const freePort = (): Promise<number> =>
+  new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address() as AddressInfo;
+      server.close(() => resolve(port));
+    });
+  });
+
+export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
   const clock = new FixedClock(new Date());
+  const port = options.listen ? await freePort() : null;
+  const overrides: Record<string, string> = { ...options.env };
+  if (port) overrides.INTERNAL_WEBHOOK_BASE_URL = `http://127.0.0.1:${port}`;
+  const saved = Object.fromEntries(Object.keys(overrides).map((k) => [k, process.env[k]]));
+  Object.assign(process.env, overrides);
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
     controllers: [ProbeController],
@@ -57,9 +81,11 @@ export async function createTestApp(): Promise<TestApp> {
     .overrideProvider(Clock)
     .useValue(clock)
     .compile();
-  const app = moduleRef.createNestApplication();
+  Object.entries(saved).forEach(([k, v]) => (v === undefined ? delete process.env[k] : (process.env[k] = v)));
+  const app = moduleRef.createNestApplication({ rawBody: true });
   configureApp(app);
-  await app.init();
+  if (port) await app.listen(port, '127.0.0.1');
+  else await app.init();
   const prisma = new PrismaClient();
   return {
     app,

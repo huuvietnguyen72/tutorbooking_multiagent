@@ -12,3 +12,10 @@ export function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T
     })),
   );
 }
+
+/** Path-param guard: a malformed id is a 400 (D4), an unknown or foreign one a 404 later on. */
+export function uuidParam(value: string, field = 'id'): string {
+  const result = z.uuid().safeParse(value);
+  if (!result.success) throw AppError.validation([{ field, code: 'invalid_uuid' }]);
+  return result.data;
+}

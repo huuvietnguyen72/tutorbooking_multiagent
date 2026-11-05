@@ -6,7 +6,7 @@ import { validateEnv } from './config/env';
 
 async function bootstrap(): Promise<void> {
   const env = validateEnv(process.env);
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   configureApp(app);
   app.enableShutdownHooks();
   await app.listen(env.PORT, '0.0.0.0');

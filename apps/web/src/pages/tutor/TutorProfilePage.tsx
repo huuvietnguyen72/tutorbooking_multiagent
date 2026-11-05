@@ -58,7 +58,7 @@ export default function TutorProfilePage() {
       subjectIds: data.subjects.map((s) => s.id),
       experience: data.experience ?? '',
       bio: data.bio ?? '',
-      pricePerSessionVnd: data.pricePerSessionVnd,
+      pricePerSessionVnd: data.pricePerSessionVnd ?? undefined,
     });
   }, [data, reset]);
 

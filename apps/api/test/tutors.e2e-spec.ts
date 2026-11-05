@@ -135,7 +135,7 @@ describe('tutors, subjects, slots (T3)', () => {
     });
 
     it('rejects invalid query input (D4)', async () => {
-      for (const q of ['pageSize=101', 'page=0', 'sort=password', 'subjectId=abc', `q=${'x'.repeat(101)}`, 'availableDate=2030-13-45', 'minRating=9']) {
+      for (const q of ['pageSize=101', 'page=0', 'sort=password', 'subjectId=abc', `q=${'x'.repeat(101)}`, 'availableDate=2030-13-45', 'availableDate=2030-02-30', 'availableDate=2031-02-29', 'minRating=9']) {
         const res = await get(t.app, `/tutors?${q}`).expect(400);
         expect(res.body.error.code).toBe('VALIDATION_FAILED');
       }

@@ -948,8 +948,21 @@ export interface components {
             pricePerSessionVnd: number;
             subjectIds: number[];
         };
-        TutorOwnProfile: components["schemas"]["TutorPublic"] & {
-            approvalStatus?: components["schemas"]["TutorApprovalStatus"];
+        TutorOwnProfile: {
+            /** Format: uuid */
+            id: string;
+            fullName: string;
+            avatarUrl?: string | null;
+            subjects: components["schemas"]["Subject"][];
+            /** @description null until the tutor sets a price */
+            pricePerSessionVnd: number | null;
+            ratingAvg: number;
+            ratingCount: number;
+            /** Format: date-time */
+            nextAvailableAt?: string | null;
+            bio?: string;
+            experience?: string;
+            approvalStatus: components["schemas"]["TutorApprovalStatus"];
             rejectionReason?: string | null;
         };
         PublicSlot: {
@@ -1014,7 +1027,7 @@ export interface components {
             id: string;
             /**
              * @description display code
-             * @example BK-1024
+             * @example #BK-1024
              */
             code?: string;
             /** Format: uuid */
@@ -2348,6 +2361,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Webhook delivery failed (INTERNAL_ERROR); the single completion is not consumed, retry is allowed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     mockPaymentWebhook: {
@@ -2365,12 +2387,17 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Processed or duplicate (no-op) */
+            /** @description Processed, duplicate (no-op) or recorded-but-ignored (out of order) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "applied" | "duplicate" | "ignored";
+                    };
+                };
             };
             /** @description Schema invalid | AMOUNT_MISMATCH | UNKNOWN_PAYMENT */
             400: {
