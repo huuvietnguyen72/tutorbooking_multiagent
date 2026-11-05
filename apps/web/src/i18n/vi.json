@@ -198,7 +198,8 @@
     "reasonMax": "Lý do tối đa 500 ký tự",
     "dateRequired": "Vui lòng chọn ngày",
     "timeRequired": "Vui lòng chọn giờ bắt đầu",
-    "slotInPast": "Không thể tạo khung giờ trong quá khứ."
+    "slotInPast": "Không thể tạo khung giờ trong quá khứ.",
+    "reasonRequiredGeneric": "Vui lòng nhập lý do"
   },
   "errors": {
     "VALIDATION_FAILED": "Dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại.",
@@ -339,5 +340,195 @@
     "empty": "Chưa có đánh giá nào.",
     "loadError": "Không tải được đánh giá.",
     "count": "({{count}} đánh giá)"
+  },
+  "admin": {
+    "close": "Đóng",
+    "reason": "Lý do",
+    "actions": "Thao tác",
+    "approvalStatus": {
+      "PENDING_APPROVAL": "Chờ duyệt",
+      "APPROVED": "Đã duyệt",
+      "REJECTED": "Bị từ chối",
+      "SUSPENDED": "Tạm ngưng"
+    },
+    "userStatus": {
+      "ACTIVE": "Hoạt động",
+      "LOCKED": "Bị khoá"
+    },
+    "bookingStatus": {
+      "PENDING_PAYMENT": "Chờ thanh toán",
+      "CONFIRMED": "Đã xác nhận",
+      "EXPIRED": "Hết hạn",
+      "CANCELLED_BY_STUDENT": "Đã huỷ bởi học viên",
+      "CANCELLED_BY_TUTOR": "Đã huỷ bởi gia sư",
+      "CANCELLED_BY_ADMIN": "Đã huỷ bởi quản trị viên"
+    },
+    "paymentStatus": {
+      "PENDING": "Chờ thanh toán",
+      "PAID": "Đã thanh toán",
+      "FAILED": "Thất bại",
+      "REFUNDED": "Đã hoàn tiền"
+    },
+    "actorType": {
+      "USER": "Người dùng",
+      "SYSTEM": "Hệ thống",
+      "PROVIDER": "Cổng thanh toán"
+    },
+    "dashboard": {
+      "title": "Tổng quan",
+      "loadError": "Không tải được số liệu tổng quan.",
+      "view": "Xem",
+      "pendingTutors": "Gia sư chờ duyệt",
+      "bookingsToday": "Booking hôm nay",
+      "confirmedUpcoming": "Buổi học sắp tới",
+      "refundsFailed": "Hoàn tiền lỗi cần xử lý",
+      "auditLink": "Xem nhật ký thao tác"
+    },
+    "tutors": {
+      "title": "Duyệt gia sư",
+      "status": "Trạng thái",
+      "allStatuses": "Tất cả trạng thái",
+      "search": "Tìm theo tên hoặc email",
+      "name": "Tên",
+      "email": "Email",
+      "subjects": "Môn",
+      "view": "Xem",
+      "price": "Học phí",
+      "noPrice": "Chưa đặt học phí",
+      "experience": "Kinh nghiệm",
+      "bio": "Giới thiệu",
+      "rejectionReason": "Lý do từ chối",
+      "reviewedAt": "Duyệt lúc",
+      "empty": "Không có gia sư phù hợp.",
+      "emptyPending": "Không có gia sư nào đang chờ duyệt.",
+      "loadError": "Không tải được danh sách gia sư.",
+      "rejectTitle": "Từ chối gia sư {{name}}?",
+      "action": {
+        "approve": "Duyệt",
+        "reject": "Từ chối",
+        "suspend": "Tạm ngưng",
+        "reinstate": "Khôi phục"
+      },
+      "done": {
+        "approve": "Đã duyệt gia sư.",
+        "reject": "Đã từ chối gia sư.",
+        "suspend": "Đã tạm ngưng gia sư.",
+        "reinstate": "Đã khôi phục gia sư."
+      },
+      "confirm": {
+        "suspend": {
+          "title": "Tạm ngưng gia sư {{name}}?",
+          "body": "Gia sư sẽ bị ẩn khỏi tìm kiếm. Các booking hiện có không tự huỷ."
+        },
+        "reinstate": {
+          "title": "Khôi phục gia sư {{name}}?",
+          "body": "Gia sư sẽ hiện lại trong tìm kiếm."
+        }
+      }
+    },
+    "users": {
+      "title": "Người dùng",
+      "search": "Tìm email hoặc tên",
+      "role": "Vai trò",
+      "status": "Trạng thái",
+      "name": "Họ tên",
+      "email": "Email",
+      "createdAt": "Ngày tạo",
+      "empty": "Không có người dùng phù hợp.",
+      "loadError": "Không tải được danh sách người dùng.",
+      "lock": "Khoá",
+      "unlock": "Mở khoá",
+      "cannotLockAdmin": "Không thể khoá tài khoản quản trị viên",
+      "lockTitle": "Khoá tài khoản {{email}}?",
+      "lockBody": "Người dùng sẽ bị đăng xuất và không đăng nhập được. Các booking hiện có không bị huỷ.",
+      "unlockTitle": "Mở khoá tài khoản {{email}}?",
+      "unlockBody": "Người dùng có thể đăng nhập lại.",
+      "unlocked": "Đã mở khoá tài khoản."
+    },
+    "bookings": {
+      "title": "Booking",
+      "status": "Trạng thái",
+      "statusCol": "Trạng thái",
+      "fromDate": "Từ ngày",
+      "toDate": "Đến ngày",
+      "onlyRefundFailed": "Hoàn tiền lỗi",
+      "refundFailed": "Hoàn tiền lỗi",
+      "code": "Mã",
+      "student": "Học viên",
+      "tutor": "Gia sư",
+      "time": "Giờ học",
+      "amount": "Số tiền",
+      "payment": "Thanh toán",
+      "detail": "Chi tiết",
+      "empty": "Không có booking phù hợp bộ lọc.",
+      "loadError": "Không tải được danh sách booking."
+    },
+    "booking": {
+      "title": "Booking {{code}}",
+      "back": "Quay lại danh sách booking",
+      "paidAt": "Thanh toán lúc {{time}}",
+      "refundedAt": "Đã hoàn tiền lúc {{time}}",
+      "refundedBy": "bởi {{name}}",
+      "cancelInfo": "Huỷ",
+      "cancelledAt": "Huỷ lúc {{time}}",
+      "cancelReason": "Lý do: {{reason}}",
+      "refundFailedHint": "Hoàn tiền qua cổng thanh toán bị lỗi. Bấm Hoàn tiền thủ công để thử lại.",
+      "cancelButton": "Huỷ & hoàn tiền…",
+      "refundButton": "Hoàn tiền thủ công",
+      "cancelTitle": "Huỷ booking {{code}}?",
+      "cancelWarning": "Khung giờ sẽ đóng và học viên được báo qua email.",
+      "refundChoice": "Hoàn tiền",
+      "refundFull": "Hoàn 100% cho học viên",
+      "refundNone": "Không hoàn tiền",
+      "cancelConfirm": "Xác nhận huỷ",
+      "cancelled": "Đã huỷ booking.",
+      "refundTitle": "Hoàn {{amount}} cho học viên?",
+      "refundWarning": "Hành động này không thể thực hiện lại.",
+      "refundConfirm": "Hoàn tiền",
+      "refunded": "Đã hoàn tiền.",
+      "refundProviderFailed": "Cổng thanh toán báo lỗi, chưa hoàn được tiền. Bạn có thể thử lại.",
+      "history": "Lịch sử trạng thái",
+      "noHistory": "Chưa có lịch sử.",
+      "transition": "Chuyển trạng thái",
+      "actor": "Thực hiện bởi",
+      "note": "Ghi chú",
+      "paymentEvents": "Sự kiện thanh toán",
+      "noPaymentEvents": "Chưa có sự kiện thanh toán.",
+      "eventId": "Mã sự kiện",
+      "outcome": "Kết quả",
+      "rejectedReason": "Lý do từ chối",
+      "auditTrail": "Nhật ký thao tác"
+    },
+    "audit": {
+      "title": "Nhật ký thao tác",
+      "empty": "Chưa có nhật ký.",
+      "loadError": "Không tải được nhật ký.",
+      "time": "Thời điểm",
+      "action": "Hành động",
+      "entity": "Đối tượng",
+      "actor": "Người thực hiện",
+      "system": "Hệ thống",
+      "actions": {
+        "TUTOR_APPROVED": "Duyệt gia sư",
+        "TUTOR_REJECTED": "Từ chối gia sư",
+        "TUTOR_SUSPENDED": "Tạm ngưng gia sư",
+        "TUTOR_REINSTATED": "Khôi phục gia sư",
+        "USER_LOCKED": "Khoá tài khoản",
+        "USER_UNLOCKED": "Mở khoá tài khoản",
+        "BOOKING_CANCELLED_BY_ADMIN": "Quản trị viên huỷ booking",
+        "PAYMENT_REFUNDED": "Hoàn tiền",
+        "PAYMENT_REFUND_FAILED": "Hoàn tiền lỗi",
+        "LATE_PAYMENT_AUTO_REFUND": "Tự hoàn tiền thanh toán muộn",
+        "REVIEW_HIDDEN": "Ẩn đánh giá",
+        "REVIEW_RESTORED": "Hiện lại đánh giá"
+      },
+      "entities": {
+        "tutor": "Gia sư",
+        "user": "Người dùng",
+        "booking": "Booking",
+        "payment": "Thanh toán",
+        "review": "Đánh giá"
+      }
+    }
   }
 }
