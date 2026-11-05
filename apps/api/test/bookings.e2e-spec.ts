@@ -617,15 +617,12 @@ describe('bookings + mock payment (T4)', () => {
       expect(await t.prisma.bookingHistory.count({ where: { toStatus: 'CONFIRMED' } })).toBe(1);
     });
 
-    it('FAILED(DECLINED) then SUCCEEDED: out of order, recorded and not applied', async () => {
+    it('FAILED(DECLINED) then SUCCEEDED: money is taken late and refunded automatically', async () => {
       await hook(event(ref, 'FAILED')).expect(200);
       expect(await state(bookingId)).toEqual({ booking: 'EXPIRED', payment: 'FAILED', reason: 'DECLINED', slot: 'AVAILABLE' });
-      const late = event(ref, 'SUCCEEDED');
-      await hook(late).expect(200);
-      // §2.4: only FAILED(HOLD_EXPIRED) may flip to PAID, so a success after DECLINED is recorded, not applied.
-      expect(await state(bookingId)).toMatchObject({ booking: 'EXPIRED', payment: 'FAILED' });
-      const stored = await t.prisma.paymentEvent.findUniqueOrThrow({ where: { provider_eventId: { provider: 'mock', eventId: late.eventId } } });
-      expect(stored.rejectedReason).toBe('OUT_OF_ORDER');
+      await hook(event(ref, 'SUCCEEDED')).expect(200);
+      expect(await state(bookingId)).toEqual({ booking: 'EXPIRED', payment: 'REFUNDED', reason: null, slot: 'AVAILABLE' });
+      expect(await t.prisma.auditLog.count({ where: { action: 'LATE_PAYMENT_AUTO_REFUND' } })).toBe(1);
     });
 
     it('SUCCEEDED after the deadline (clock passed hold) takes the late-payment path', async () => {
@@ -785,7 +782,11 @@ describe('bookings + mock payment (T4)', () => {
           expect(cancel.status).toBe(409); // webhook won: a CONFIRMED booking inside... 48h out can still be cancelled
         }
         expect(['CONFIRMED', 'EXPIRED', 'CANCELLED_BY_STUDENT']).toContain(s.booking);
-        if (s.booking === 'EXPIRED') expect(s.slot).toBe('AVAILABLE');
+        if (s.booking === 'EXPIRED') {
+          expect(s.slot).toBe('AVAILABLE');
+          // webhook landed after the cancel: the money must have been refunded, never left PAID/FAILED
+          expect(s.payment).toBe('REFUNDED');
+        }
         if (s.booking === 'CONFIRMED') expect(s.slot).toBe('BOOKED');
       }
     });

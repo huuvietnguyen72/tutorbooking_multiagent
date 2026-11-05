@@ -120,7 +120,8 @@ export class MockGatewayService {
     } catch (error) {
       this.logger.error(`Mock webhook dispatch failed: ${error instanceof Error ? error.message : 'unknown'}`);
     }
-    if (status !== null && status < 500) {
+    // 429 (shared webhook rate-limit bucket) means the event was not processed, same as a 5xx.
+    if (status !== null && status < 500 && status !== 429) {
       if (status >= 400) this.logger.warn(`Mock webhook for payment ${paymentId} answered ${status}`);
       return;
     }

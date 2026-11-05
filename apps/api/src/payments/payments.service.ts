@@ -89,8 +89,9 @@ export class PaymentsService {
       return 'APPLIED';
     }
 
-    if (current.status === 'EXPIRED' && event.outcome === 'SUCCEEDED' && pay.status === 'FAILED' && pay.failureReason === 'HOLD_EXPIRED') {
-      // Money arrived after the hold ran out: never confirm, take it and give it back (AC8).
+    if (current.status === 'EXPIRED' && event.outcome === 'SUCCEEDED' && pay.status === 'FAILED') {
+      // Money arrived after the hold ended (timeout, decline or student cancel mid-payment):
+      // never confirm, take it and give it back (AC8).
       await tx.payment.update({ where: { id: pay.id }, data: { status: 'PAID', failureReason: null, paidAt: now } });
       const refunded = await this.machine.refund(tx, { ...pay, status: 'PAID' }, 'LATE_PAYMENT');
       await tx.auditLog.create({
@@ -99,7 +100,7 @@ export class PaymentsService {
           action: 'LATE_PAYMENT_AUTO_REFUND',
           entityType: 'payment',
           entityId: pay.id,
-          reason: 'Payment arrived after the booking hold expired',
+          reason: 'Payment arrived after the booking hold ended',
           metadata: { bookingId: current.id, eventId: event.eventId, refunded },
         },
       });
@@ -107,7 +108,7 @@ export class PaymentsService {
       return 'APPLIED';
     }
 
-    // Duplicates of a settled outcome are harmless (CONFIRMED + SUCCEEDED, EXPIRED + FAILED);
+    // Duplicates of a settled outcome are harmless (CONFIRMED + SUCCEEDED, EXPIRED + FAILED, REFUNDED + SUCCEEDED);
     // anything else is out of order and is recorded, not applied.
     const harmless =
       (current.status === 'CONFIRMED' && event.outcome === 'SUCCEEDED') || (current.status === 'EXPIRED' && event.outcome === 'FAILED');
