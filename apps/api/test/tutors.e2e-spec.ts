@@ -281,6 +281,10 @@ describe('tutors, subjects, slots (T3)', () => {
       );
       expect(results.filter((r) => r.status === 201)).toHaveLength(1);
       expect(results.filter((r) => r.status === 409)).toHaveLength(7);
+      for (const loser of results.filter((r) => r.status !== 201)) {
+        expect(loser.body.error.code).toBe('SLOT_OVERLAP');
+      }
+      expect(await t.prisma.slot.count({ where: { tutorId: tutor.id } })).toBe(1);
     });
 
     it('validates input: past, no offset, empty, >50, extra keys', async () => {
