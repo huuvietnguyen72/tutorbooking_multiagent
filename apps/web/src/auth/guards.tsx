@@ -2,7 +2,7 @@ import { Spin } from 'antd';
 import type { ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useMe } from '../api/hooks';
-import type { UserRole } from '../api/types';
+import type { TutorApprovalStatus, UserRole } from '../api/types';
 import { defaultHome, ROUTES } from './routes';
 import { ErrorState } from '../components/States';
 
@@ -46,4 +46,14 @@ export function ForcePasswordGate() {
     return <Navigate to={ROUTES.forcePassword} replace />;
   }
   return <Outlet />;
+}
+
+/**
+ * Tutor-only pages. `allow` lists the approval states that may enter; everyone else lands on the S-16 gate.
+ * (Slots need APPROVED; the session list also stays open for SUSPENDED tutors to see existing bookings.)
+ */
+export function RequireTutorStatus({ allow, children }: { allow: TutorApprovalStatus[]; children: ReactNode }) {
+  const { data: me } = useMe();
+  const status = me?.tutorApprovalStatus ?? 'PENDING_APPROVAL';
+  return allow.includes(status) ? children : <Navigate to={ROUTES.tutorGate} replace />;
 }

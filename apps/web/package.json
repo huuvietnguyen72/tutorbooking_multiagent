@@ -39,7 +39,7 @@
     "openapi-typescript": "7.13.0",
     "typescript": "5.7.2",
     "vite": "6.4.5",
-    "vitest": "3.2.7"
+    "vitest": "4.1.12"
   },
   "msw": {
     "workerDirectory": [

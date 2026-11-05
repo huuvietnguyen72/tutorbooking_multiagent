@@ -1,11 +1,13 @@
 import dayjs, { type Dayjs } from 'dayjs';
 import 'dayjs/locale/vi';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import i18n from '../i18n';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
 /**
  * The only place that converts between UTC (API) and the display timezone.
@@ -94,4 +96,19 @@ export function formatCountdown(remainingMs: number): string {
   const mm = String(Math.floor(total / 60)).padStart(2, '0');
   const ss = String(total % 60).padStart(2, '0');
   return `${mm}:${ss}`;
+}
+
+/** Combines a calendar date (`YYYY-MM-DD`) and a wall-clock time (`HH:mm`) in the display timezone into a UTC ISO string. */
+export function toUtcIso(date: string, time: string): string {
+  return dayjs.tz(`${date} ${time}`, 'YYYY-MM-DD HH:mm', DISPLAY_TIMEZONE).toISOString();
+}
+
+/** `YYYY-MM-DD` of today in the display timezone. */
+export function todayKey(): string {
+  return inVn(new Date()).format('YYYY-MM-DD');
+}
+
+/** `HH:mm` of a UTC ISO string in the display timezone. */
+export function timeKey(iso: string): string {
+  return inVn(iso).format('HH:mm');
 }

@@ -1,5 +1,6 @@
 import { createBrowserRouter, createMemoryRouter, type RouteObject } from 'react-router-dom';
-import { GuestOnly, RequireAuth } from './auth/guards';
+import type { TutorApprovalStatus } from './api/types';
+import { GuestOnly, RequireAuth, RequireTutorStatus } from './auth/guards';
 import { ROUTES } from './auth/routes';
 import AppLayout from './layout/AppLayout';
 import AccountPage from './pages/AccountPage';
@@ -16,6 +17,14 @@ import {
 import RegisterPage from './pages/RegisterPage';
 import TutorDetailPage from './pages/TutorDetailPage';
 import TutorListPage from './pages/TutorListPage';
+import TutorProfilePage from './pages/tutor/TutorProfilePage';
+import TutorReviewsPage from './pages/tutor/TutorReviewsPage';
+import TutorSessionDetailPage from './pages/tutor/TutorSessionDetailPage';
+import TutorSessionsPage from './pages/tutor/TutorSessionsPage';
+import TutorSlotsPage from './pages/tutor/TutorSlotsPage';
+
+/** A suspended tutor keeps access to existing sessions/reviews (S-16). */
+const SESSION_STATES: TutorApprovalStatus[] = ['APPROVED', 'SUSPENDED'];
 
 const placeholder = <PlaceholderPage />;
 
@@ -52,11 +61,11 @@ export const routes: RouteObject[] = [
         element: <RequireAuth roles={['TUTOR']} />,
         children: [
           { path: ROUTES.tutorGate, element: <TutorGatePage /> },
-          { path: ROUTES.tutorProfile, element: placeholder },
-          { path: ROUTES.tutorSlots, element: placeholder },
-          { path: ROUTES.tutorSessions, element: placeholder },
-          { path: '/gia-su/buoi-day/:bookingId', element: placeholder },
-          { path: ROUTES.tutorReviews, element: placeholder },
+          { path: ROUTES.tutorProfile, element: <TutorProfilePage /> },
+          { path: ROUTES.tutorSlots, element: <RequireTutorStatus allow={['APPROVED']}><TutorSlotsPage /></RequireTutorStatus> },
+          { path: ROUTES.tutorSessions, element: <RequireTutorStatus allow={SESSION_STATES}><TutorSessionsPage /></RequireTutorStatus> },
+          { path: '/gia-su/buoi-day/:bookingId', element: <RequireTutorStatus allow={SESSION_STATES}><TutorSessionDetailPage /></RequireTutorStatus> },
+          { path: ROUTES.tutorReviews, element: <RequireTutorStatus allow={SESSION_STATES}><TutorReviewsPage /></RequireTutorStatus> },
         ],
       },
       {

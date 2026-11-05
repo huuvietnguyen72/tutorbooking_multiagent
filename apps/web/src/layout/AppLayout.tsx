@@ -1,5 +1,5 @@
 import { DownOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Button, Dropdown, Layout, Menu, Space } from 'antd';
+import { Avatar, Button, Dropdown, Layout, Menu, Space, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLogout, useMe } from '../api/hooks';
@@ -11,6 +11,8 @@ import { initialOf } from '../lib/format';
 interface NavItem {
   key: string;
   labelKey: string;
+  /** i18n key of the tooltip explaining why the item is disabled */
+  disabledHintKey?: string;
 }
 
 /** Header menu per role (design §2.5). */
@@ -20,9 +22,18 @@ function navFor(me: Me | null | undefined): NavItem[] {
     case 'TUTOR':
       return [
         { key: ROUTES.tutorProfile, labelKey: 'nav.tutorProfile' },
-        { key: ROUTES.tutorSlots, labelKey: 'nav.tutorSlots' },
-        { key: ROUTES.tutorSessions, labelKey: 'nav.tutorSessions' },
-        { key: ROUTES.tutorReviews, labelKey: 'nav.tutorReviews' },
+        me.tutorApprovalStatus === 'APPROVED'
+          ? { key: ROUTES.tutorSlots, labelKey: 'nav.tutorSlots' }
+          : { key: ROUTES.tutorSlots, labelKey: 'nav.tutorSlots', disabledHintKey: 'nav.needApproval' },
+        ...(me.tutorApprovalStatus === 'APPROVED' || me.tutorApprovalStatus === 'SUSPENDED'
+          ? [
+              { key: ROUTES.tutorSessions, labelKey: 'nav.tutorSessions' },
+              { key: ROUTES.tutorReviews, labelKey: 'nav.tutorReviews' },
+            ]
+          : [
+              { key: ROUTES.tutorSessions, labelKey: 'nav.tutorSessions', disabledHintKey: 'nav.needApproval' },
+              { key: ROUTES.tutorReviews, labelKey: 'nav.tutorReviews', disabledHintKey: 'nav.needApproval' },
+            ]),
       ];
     case 'ADMIN':
       return [
@@ -76,7 +87,17 @@ export default function AppLayout() {
           mode="horizontal"
           aria-label={t('nav.mainMenu')}
           selectedKeys={selectedKey(items, pathname)}
-          items={items.map((i) => ({ key: i.key, label: <Link to={i.key}>{t(i.labelKey)}</Link> }))}
+          items={items.map((i) => ({
+            key: i.key,
+            disabled: !!i.disabledHintKey,
+            label: i.disabledHintKey ? (
+              <Tooltip title={t(i.disabledHintKey)}>
+                <span>{t(i.labelKey)}</span>
+              </Tooltip>
+            ) : (
+              <Link to={i.key}>{t(i.labelKey)}</Link>
+            ),
+          }))}
           style={{ flex: 1, minWidth: 0 }}
         />
         {me ? (

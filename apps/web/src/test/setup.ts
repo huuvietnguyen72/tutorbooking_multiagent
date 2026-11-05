@@ -22,9 +22,24 @@ window.HTMLElement.prototype.scrollIntoView = () => undefined;
 
 // Node's fetch (undici) rejects jsdom's AbortSignal and relative URLs; adapt it for tests only.
 const nodeFetch = globalThis.fetch.bind(globalThis);
-globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+// jsdom's FormData/File are not the ones undici understands; rebuild the body with Node's FormData
+// (obtained from a parsed Response, because jsdom shadows the global).
+const JsdomFormData = globalThis.FormData;
+async function toNodeBody(body: BodyInit | null | undefined): Promise<BodyInit | null | undefined> {
+  if (!(body instanceof JsdomFormData)) return body;
+  const NodeFormData = (
+    await new Response('a=1', { headers: { 'content-type': 'application/x-www-form-urlencoded' } }).formData()
+  ).constructor as new () => FormData;
+  const out = new NodeFormData();
+  for (const [key, value] of body.entries()) {
+    if (typeof value === 'string') out.append(key, value);
+    else out.append(key, new Blob([await value.arrayBuffer()], { type: value.type }), value.name);
+  }
+  return out;
+}
+globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? new URL(input, window.location.href).toString() : input;
-  return nodeFetch(url, init ? { ...init, signal: undefined } : init);
+  return nodeFetch(url, init ? { ...init, body: await toNodeBody(init.body), signal: undefined } : init);
 };
 
 const NodeRequest = globalThis.Request;
