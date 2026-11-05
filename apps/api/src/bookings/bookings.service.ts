@@ -10,7 +10,7 @@ import { PAYMENT_PROVIDER, PaymentProvider } from '../payments/payment-provider'
 import { BookingExpiryService, TX_OPTIONS } from './booking-expiry.service';
 import { BookingStateMachine, Tx } from './booking-state-machine';
 import { formatBookingCode } from './booking-code';
-import { cancellationPolicy, isHoldExpired } from './booking.policy';
+import { cancellationPolicy, isHoldExpired, reschedulePolicy } from './booking.policy';
 import {
   StudentBookingDto,
   studentBookingInclude,
@@ -207,9 +207,21 @@ export class BookingsService {
     return booking;
   }
 
-  private async findStudentConflict(tx: Tx | PrismaService, studentId: string, startAt: Date, endAt: Date): Promise<AppError | null> {
+  private async findStudentConflict(
+    tx: Tx | PrismaService,
+    studentId: string,
+    startAt: Date,
+    endAt: Date,
+    exceptBookingId?: string,
+  ): Promise<AppError | null> {
     const other = await tx.booking.findFirst({
-      where: { studentId, status: { in: ['PENDING_PAYMENT', 'CONFIRMED'] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
+      where: {
+        studentId,
+        status: { in: ['PENDING_PAYMENT', 'CONFIRMED'] },
+        startAt: { lt: endAt },
+        endAt: { gt: startAt },
+        ...(exceptBookingId ? { id: { not: exceptBookingId } } : {}),
+      },
       include: { tutor: { select: { fullName: true } } },
     });
     if (!other) return null;
@@ -297,6 +309,56 @@ export class BookingsService {
     if (outcome.denied === 'NOT_FOUND') throw AppError.notFound();
     if (outcome.denied) throw new AppError(409, outcome.denied, 'Booking cannot be cancelled');
     return this.get(studentId, bookingId);
+  }
+
+  // ---- reschedule ----
+
+  async reschedule(studentId: string, bookingId: string, newSlotId: string): Promise<StudentBookingDto> {
+    await this.loadFresh(studentId, bookingId); // 404 before taking any lock
+    await this.expiry.expireDueFor({ studentId }); // an overdue hold of this student must not block the new time
+    try {
+      await this.prisma.$transaction((tx) => this.rescheduleInTx(tx, studentId, bookingId, newSlotId), TX_OPTIONS);
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      const state = sqlState(error);
+      // Constraints are only the last safety net under the locks below.
+      if (state === '23P01') throw new AppError(409, 'STUDENT_OVERLAP', 'You already have a booking at this time');
+      if (state === '23505') throw new AppError(409, 'SLOT_UNAVAILABLE', 'Slot is no longer available');
+      throw error;
+    }
+    return this.get(studentId, bookingId);
+  }
+
+  private async rescheduleInTx(tx: Tx, studentId: string, bookingId: string, newSlotId: string): Promise<void> {
+    const now = this.clock.now();
+    // Same per-student serialization as create(): exclusion-constraint writes of one student must not deadlock.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${studentId}, 0))`;
+    const locked = await this.machine.lockBooking(tx, bookingId);
+    if (!locked || locked.studentId !== studentId) throw AppError.notFound();
+    const decision = reschedulePolicy(locked, now, this.cfg);
+    if (!decision.allowed) throw new AppError(409, decision.code, 'Booking cannot be rescheduled');
+
+    await this.machine.lockSlots(tx, [locked.slotId, newSlotId]); // ascending id order (A4)
+    const target = await tx.slot.findUnique({ where: { id: newSlotId } });
+    if (!target || target.deletedAt || target.status === 'CLOSED') throw AppError.notFound();
+    const sameDuration = target.endAt.getTime() - target.startAt.getTime() === locked.endAt.getTime() - locked.startAt.getTime();
+    if (target.tutorId !== locked.tutorId || !sameDuration || target.id === locked.slotId || target.status !== 'AVAILABLE') {
+      throw new AppError(409, 'SLOT_UNAVAILABLE', 'Slot is not available for this booking');
+    }
+    if (target.startAt.getTime() < now.getTime() + this.env.MIN_BOOKING_LEAD_MINUTES * 60_000) {
+      throw new AppError(409, 'SLOT_TOO_SOON', 'Slot starts too soon to book');
+    }
+    const profile = await tx.tutorProfile.findUnique({
+      where: { userId: target.tutorId },
+      select: { approvalStatus: true, user: { select: { status: true } } },
+    });
+    if (!profile || profile.approvalStatus !== 'APPROVED' || profile.user.status !== 'ACTIVE') {
+      throw new AppError(409, 'TUTOR_NOT_ACCEPTING', 'Tutor is not accepting bookings');
+    }
+    const conflict = await this.findStudentConflict(tx, studentId, target.startAt, target.endAt, bookingId);
+    if (conflict) throw conflict;
+
+    await this.machine.reschedule(tx, locked, target, studentId);
   }
 
   // ---- tutor side ----

@@ -2592,6 +2592,8 @@ export interface operations {
                 studentId?: string;
                 from?: string;
                 to?: string;
+                /** @description Only `true` is accepted: bookings whose refund failed at the provider and await a manual retry. */
+                refundFailed?: "true";
                 page?: components["parameters"]["Page"];
                 pageSize?: components["parameters"]["PageSize"];
             };
