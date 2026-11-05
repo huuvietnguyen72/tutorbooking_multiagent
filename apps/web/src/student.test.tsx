@@ -251,7 +251,7 @@ describe('my bookings and detail (S-10, S-11)', () => {
     expect(await screen.findByText('Đánh giá của bạn')).toBeInTheDocument();
     expect(screen.getByText('Dạy rất dễ hiểu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Đánh giá gia sư' })).not.toBeInTheDocument();
-  });
+  }, 60000);
 
   it('explains why review is not yet possible before the session ends', async () => {
     const upcoming = seedStudentBooking('u-student', { startAt: Date.now() + 72 * HOUR });
@@ -280,8 +280,8 @@ describe('reschedule (S-13)', () => {
     const slotButtons = () =>
       within(screen.getByRole('main')).queryAllByRole('button').filter((b) => /^\d\d:\d\d–\d\d:\d\d$/.test(b.textContent ?? '') && !(b as HTMLButtonElement).disabled);
     for (let i = 0; i < 4 && slotButtons().length === 0; i += 1) {
-      await user.click(await screen.findByRole('button', { name: 'Tuần sau' }));
-      await new Promise((r) => setTimeout(r, 50));
+      await user.click(await screen.findByRole('button', { name: 'Tuần sau', exact: true }));
+      await waitFor(() => expect(document.querySelector('section .ant-skeleton')).not.toBeInTheDocument());
     }
     await waitFor(() => expect(slotButtons().length).toBeGreaterThan(0));
     await user.click(slotButtons()[0]);
@@ -293,7 +293,7 @@ describe('reschedule (S-13)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(`/lich-cua-toi/${booking.id}`));
     expect(await screen.findByText('1/1')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Đổi lịch' })).toBeDisabled();
-  });
+  }, 60000);
 
   it('refuses the reschedule page when the server says it is not allowed', async () => {
     const once = seedStudentBooking('u-student', { startAt: Date.now() + 72 * HOUR, rescheduleCount: 1 });

@@ -94,6 +94,7 @@ export function useTutor(tutorId: string) {
 export function useTutorSlots(tutorId: string, from: string, to: string) {
   return useQuery({
     queryKey: ['tutor', tutorId, 'slots', from, to],
+    enabled: !!tutorId,
     queryFn: ({ signal }) => api.listTutorSlots(tutorId, from, to, signal),
   });
 }

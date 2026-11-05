@@ -30,11 +30,15 @@ test('E2E-09 đổi lịch một lần: giờ mới, slot cũ mở lại và ema
   expect(after.rescheduleCount).toBe(1);
   expect(after.status).toBe('CONFIRMED');
   expect(after.payment.status).toBe('PAID');
-  const slots = await tutor.get<{ id: string; status: string }[]>(
-    `/tutor/slots?from=${encodeURIComponent(new Date(Date.parse(booking.startAt) - 3_600_000).toISOString())}&to=${encodeURIComponent(new Date(Date.parse(target.endAt) + 3_600_000).toISOString())}`,
-  );
-  expect(slots.find((s) => s.id === booking.slotId)?.status).toBe('AVAILABLE');
-  expect(slots.find((s) => s.id === target.id)?.status).toBe('BOOKED');
+  // Query each slot separately: the randomized original can be months after the new slot.
+  const slotStatus = async (slot: { id: string; startAt: string; endAt: string }) => {
+    const slots = await tutor.get<{ id: string; status: string }[]>(
+      `/tutor/slots?from=${encodeURIComponent(slot.startAt)}&to=${encodeURIComponent(slot.endAt)}`,
+    );
+    return slots.find((s) => s.id === slot.id)?.status;
+  };
+  expect(await slotStatus({ id: booking.slotId, startAt: booking.startAt, endAt: booking.endAt })).toBe('AVAILABLE');
+  expect(await slotStatus(target)).toBe('BOOKED');
   await page.goto(`/lich-cua-toi/${booking.id}/doi-lich`);
   await expect(page.getByText('Buổi học này không thể đổi lịch.')).toBeVisible();
   await expect(page.getByText('Mỗi lịch chỉ được đổi 1 lần.')).toBeVisible();
