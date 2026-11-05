@@ -35,6 +35,9 @@ test.describe('Huỷ, hoàn tiền và các ca biên', () => {
 
   test('E2E-07 huỷ trong vòng 24 giờ bị chặn', async ({ pageAs, student, confirmedBooking }) => {
     const booking = await confirmedBooking({ inHours: 23 });
+    // A slot collision must never move this precondition outside the 24h window.
+    expect(Date.parse(booking.startAt) - Date.now()).toBeLessThan(24 * 3_600_000);
+    expect(booking.actions?.cancel).toEqual({ allowed: false, reasonCode: 'WINDOW_PASSED' });
     const page = await pageAs('student');
 
     await page.goto(`/lich-cua-toi/${booking.id}`);

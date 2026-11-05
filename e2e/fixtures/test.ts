@@ -6,6 +6,7 @@ import { Db } from './db';
 import { STUDENT2_FILE, stateFile, type Role } from './paths';
 
 interface Fixtures {
+  rateLimitWindow: void;
   student: Api;
   student2: Api;
   tutor: Api;
@@ -31,6 +32,13 @@ function randomStart(): Date {
 }
 
 export const test = base.extend<Fixtures>({
+  // Each case shares the seeded student's 10/min booking and gateway budgets.
+  // Wait for the real production window; do not disable or clear the limiter.
+  rateLimitWindow: [async ({}, use) => {
+    await new Promise((resolve) => setTimeout(resolve, 61_000));
+    await use();
+  }, { auto: true, timeout: 70_000 }],
+
   student: async ({}, use) => { const a = await clients('student'); await use(a); await a.dispose(); },
   student2: async ({}, use) => { const a = await clients('student2'); await use(a); await a.dispose(); },
   tutor: async ({}, use) => { const a = await clients('tutor'); await use(a); await a.dispose(); },
@@ -40,7 +48,7 @@ export const test = base.extend<Fixtures>({
   newSlot: async ({ tutor }, use) => {
     await use(async (owner = tutor, opts = {}) => {
       for (let attempt = 0; attempt < 5; attempt++) {
-        const startAt = opts.startAt ?? (opts.inHours === undefined ? randomStart() : new Date(Date.now() + opts.inHours * 3_600_000 + attempt * 61 * 60_000));
+        const startAt = opts.startAt ?? (opts.inHours === undefined ? randomStart() : new Date(Date.now() + opts.inHours * 3_600_000 - attempt * 61 * 60_000));
         const res = await owner.send<Slot[]>('post', '/tutor/slots', { startTimes: [startAt.toISOString()] });
         if (res.status === 201) return res.body[0];
         if (res.status !== 409) throw new Error(`createSlot -> ${res.status} ${JSON.stringify(res.body)}`);
