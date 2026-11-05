@@ -705,6 +705,7 @@ paths:
         - { name: studentId, in: query, schema: { type: string, format: uuid } }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: refundFailed, in: query, description: 'Only `true` is accepted: bookings whose refund failed at the provider and await a manual retry.', schema: { type: string, enum: ['true'] } }
         - { $ref: '#/components/parameters/Page' }
         - { $ref: '#/components/parameters/PageSize' }
       responses:

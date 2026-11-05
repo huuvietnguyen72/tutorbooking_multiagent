@@ -42,7 +42,7 @@ export const listAdminBookingsSchema = z.object({
   from: instant.optional(),
   to: instant.optional(),
   /** Refunds that failed at the provider and wait for a manual retry (US-ADM-04 AC2). */
-  refundFailed: z.enum(['true', 'false']).optional(),
+  refundFailed: z.enum(['true']).optional(),
   ...paging,
 });
 

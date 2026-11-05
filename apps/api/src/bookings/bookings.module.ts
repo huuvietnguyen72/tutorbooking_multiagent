@@ -42,7 +42,7 @@ import { PublicConfigController } from './config.controller';
     MockGatewayService,
     MockGatewayEnabledMiddleware,
   ],
-  exports: [BookingStateMachine, BookingExpiryService, ReviewsService, BookingsService],
+  exports: [BookingStateMachine, BookingExpiryService, ReviewsService],
 })
 export class BookingsModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

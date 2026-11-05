@@ -37,7 +37,7 @@ export interface BookingFilter {
   studentId?: string;
   from?: Date;
   to?: Date;
-  refundFailed?: 'true' | 'false';
+  refundFailed?: 'true';
 }
 
 @Injectable()
