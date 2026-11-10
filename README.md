@@ -54,6 +54,12 @@ Chạy bộ biến thể dùng DB test:
 docker compose -f docker-compose.yml -f docker-compose.test.yml up --build
 ```
 
+## Vận hành, backup, demo
+
+- [`docs/runbook.md`](docs/runbook.md) — khởi động, cấu hình, sự cố thường gặp, nâng cấp.
+- `./scripts/backup.sh` / `./scripts/restore.sh` — `pg_dump` (+ ảnh đại diện) và khôi phục.
+- [`docs/demo.md`](docs/demo.md) — kịch bản demo và tài khoản seed.
+
 ## Phát triển ngoài Docker
 
 ```bash
@@ -98,6 +104,6 @@ Các lệnh ở thư mục gốc:
 ```
 apps/api        NestJS API (health endpoint, config validation)
 apps/web        React + Vite SPA, text tiếng Việt trong src/i18n/vi.json
-docs            architecture.md, openapi.yaml
-scripts         init-env.sh, webhook-demo.sh
+docs            architecture.md, openapi.yaml, runbook.md, demo.md
+scripts         init-env.sh, webhook-demo.sh, backup.sh, restore.sh
 ```

@@ -25,6 +25,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY apps/api/prisma ./apps/api/prisma
 RUN cd apps/api && npx prisma generate
 COPY --from=build --chown=node:node /app/apps/api/dist ./apps/api/dist
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node
 WORKDIR /app/apps/api
 EXPOSE 3000
