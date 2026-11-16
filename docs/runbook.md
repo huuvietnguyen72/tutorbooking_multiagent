@@ -68,3 +68,16 @@ Rollback: checkout phiên bản cũ, `up -d --build`; nếu migration đã đổ
 ## 6. Deploy public (tuỳ chọn)
 
 Chỉ dùng free tier; **mọi chi phí phải hỏi board qua CEO trước**. Bắt buộc khi public: `SEED_DEMO_DATA=false`, `MOCK_GATEWAY_ENABLED=false` (hoặc chấp nhận rõ ràng là demo), secret mới sinh bằng `init-env.sh`, HTTPS ở lớp ngoài (reverse proxy/nền tảng), không mở cổng 5432/1025/8025. Chưa triển khai public tại thời điểm viết tài liệu này.
+
+## 7. Kiểm tra lỗ hổng phụ thuộc (security-audit)
+
+Workflow `.github/workflows/security-audit.yml` chạy khi có PR và hàng tuần (thứ Hai 02:00 UTC); có thể chạy tay qua *Actions → Security audit → Run workflow*. Dependabot (`.github/dependabot.yml`) mở PR cập nhật npm và GitHub Actions hàng tuần, gom bản minor/patch vào một PR mỗi nhóm.
+
+**Đọc kết quả**
+- Job `Dependency audit`: xem log bước `npm audit`; mỗi mục ghi gói, mức độ, đường dẫn phụ thuộc và `fix available`. Job fail khi có lỗ hổng mức `high` trở lên. Chạy lại cục bộ: `npm audit --audit-level=high`.
+- Job `Secret scan (gitleaks)`: log nêu rule, file, commit và dòng bị phát hiện.
+
+**Xử lý khi fail**
+1. Lỗ hổng phụ thuộc: thử `npm audit fix` (không dùng `--force` khi chưa review), chạy lại lint/test rồi commit lockfile. Nếu cần bản major, merge PR Dependabot tương ứng sau khi test. Nếu là phụ thuộc gián tiếp chưa có bản vá, dùng `overrides` trong `package.json` hoặc thay gói; nếu lỗ hổng không khai thác được trong dự án, ghi lý do vào PR và hỏi board/CEO trước khi bỏ qua.
+2. Secret bị lộ: coi là đã lộ — **thu hồi/xoay secret ngay** ở nơi phát hành, rồi gỡ khỏi code. Chỉ thêm vào allowlist `.gitleaks.toml` nếu chắc chắn là giá trị giả (placeholder/CI).
+3. Lỗi tạm thời (mạng, registry): chạy lại job trước khi kết luận.
