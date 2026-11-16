@@ -1,4 +1,6 @@
-import { Button, Card, List, Space, Tabs, Typography } from 'antd';
+import BookingCalendar from '../../components/calendar/BookingCalendar';
+import calendarLabels from '../../components/calendar/vi.json';
+import { Button, Card, List, Segmented, Space, Tabs, Typography } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -89,13 +91,15 @@ function BookingList({ scope }: { scope: StudentScope }) {
 
 /** S-10: upcoming / past / cancelled-or-expired bookings. */
 export default function MyBookingsPage() {
+  const [view, setView] = useState<string | number>('list');
   const { t } = useTranslation();
   return (
     <Card>
       <Typography.Title level={3}>{t('myBookings.title')}</Typography.Title>
+      <Segmented aria-label={calendarLabels.view} value={view} onChange={setView} options={[{ value: 'list', label: calendarLabels.list }, { value: 'week', label: calendarLabels.week }]} />
       <Tabs
         destroyInactiveTabPane
-        items={SCOPES.map((scope) => ({ key: scope, label: t(`myBookings.${scope}`), children: <BookingList scope={scope} /> }))}
+        items={SCOPES.map((scope) => ({ key: scope, label: t(`myBookings.${scope}`), children: view === 'list' ? <BookingList scope={scope} /> : <BookingCalendar role="student" scope={scope} /> }))}
       />
     </Card>
   );

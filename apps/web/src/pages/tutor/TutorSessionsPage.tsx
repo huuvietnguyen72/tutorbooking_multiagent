@@ -1,4 +1,6 @@
-import { Button, Card, List, Tabs, Tag, Typography } from 'antd';
+import BookingCalendar from '../../components/calendar/BookingCalendar';
+import calendarLabels from '../../components/calendar/vi.json';
+import { Button, Card, List, Segmented, Tabs, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -50,13 +52,15 @@ function SessionList({ scope }: { scope: TeachingScope }) {
 
 /** S-20: upcoming / past / cancelled teaching sessions. */
 export default function TutorSessionsPage() {
+  const [view, setView] = useState<string | number>('list');
   const { t } = useTranslation();
   return (
     <Card>
       <Typography.Title level={3}>{t('tutorSessions.title')}</Typography.Title>
+      <Segmented aria-label={calendarLabels.view} value={view} onChange={setView} options={[{ value: 'list', label: calendarLabels.list }, { value: 'week', label: calendarLabels.week }]} />
       <Tabs
         destroyInactiveTabPane
-        items={SCOPES.map((scope) => ({ key: scope, label: t(`tutorSessions.${scope}`), children: <SessionList scope={scope} /> }))}
+        items={SCOPES.map((scope) => ({ key: scope, label: t(`tutorSessions.${scope}`), children: view === 'list' ? <SessionList scope={scope} /> : <BookingCalendar role="tutor" scope={scope} /> }))}
       />
     </Card>
   );

@@ -1,0 +1,27 @@
+.week-toolbar { margin-bottom: 16px; }
+.week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); overflow-x: auto; }
+.week-day { min-width: 0; border: 1px solid #e5e7eb; }
+.week-day h4 { margin: 0; padding: 8px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+.week-today { background: #e6f4ff; color: #0958d9; }
+.week-events { display: grid; grid-template-rows: repeat(24, minmax(22px, auto)); gap: 2px; padding: 4px; }
+.week-event { min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-left: 3px solid #8c8c8c; background: #fafafa; color: #262626; overflow-wrap: anywhere; }
+.week-event .ant-tag { white-space: normal; margin: 0; }
+.week-event-CONFIRMED { border-color: #389e0d; background: #f6ffed; }
+.week-event-PENDING_PAYMENT { border-color: #d48806; background: #fffbe6; }
+.week-event-CANCELLED_BY_STUDENT, .week-event-CANCELLED_BY_TUTOR, .week-event-CANCELLED_BY_ADMIN { border-color: #cf1322; background: #fff1f0; }
+.week-event:hover, .week-event:focus-visible { outline: 2px solid #1677ff; }
+.week-empty { grid-row: 1; color: #666; font-size: 12px; }
+@media (max-width: 767px) {
+  .week-grid { display: flex; flex-direction: column; gap: 12px; }
+  .week-day h4 { text-align: left; }
+  .week-events { display: flex; flex-direction: column; }
+  .week-event { padding: 10px; }
+}
+.week-hour { min-width: 0; border-top: 1px solid #f0f0f0; }
+.week-hour-label { display: block; font-size: 10px; color: #666; }
+.week-hour .week-event + .week-event { margin-top: 4px; }
+@media (max-width: 767px) {
+  .week-hour:has(.week-event) { display: block; }
+  .week-hour { display: none; }
+  .week-hour-label { display: none; }
+}
