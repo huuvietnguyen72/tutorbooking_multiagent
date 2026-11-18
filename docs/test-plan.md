@@ -231,6 +231,7 @@ e2e/
    ├─ booking-payment.spec.ts   # E2E-01..05, E2E-10
    ├─ cancel-refund.spec.ts     # E2E-06..08
    ├─ flows.spec.ts             # E2E-09, E2E-11..13
+   ├─ tutor.spec.ts             # E2E-14..17 (luồng gia sư)
 ```
 
 - `playwright.config.ts`: `projects: [{name:'chromium'}]`, `workers: 1`, `retries: process.env.CI ? 1 : 0`, `use: { trace: 'on-first-retry', screenshot: 'only-on-failure' }`, `timeout: 60_000`, `expect.timeout: 10_000`.
@@ -255,6 +256,10 @@ e2e/
 | **E2E-11 ☆ Chống trùng lịch qua UI** | student1 đặt slot X `CONFIRMED`; student1 mở slot Y trùng giờ (tutor khác, seed) → xác nhận đặt | UI hiện lỗi trùng lịch với thông tin booking xung đột (`details.conflictingBooking`: giờ, tên tutor) từ `vi.json` (US-STU-03 AC6) |
 | **E2E-12 ☆ Review sau buổi học** | booking `CONFIRMED` có `end ≤ now` (seed qua clock/DB) → S-14 gửi 5★ + nhận xét | Review lưu; hồ sơ công khai tutor hiện điểm mới; gửi lần 2 → bị chặn `ALREADY_REVIEWED` (US-STU-07) |
 | **E2E-13 ☆ Webhook nội bộ, không truy cập được từ browser** | từ test (network ngoài compose): `POST {WEB}/api/v1/payments/webhooks/mock` kể cả body ký đúng secret (secret chỉ có trong env CI, test mô phỏng request không ký) | Nginx trả 404; trạng thái booking không đổi (Security B5, checklist 15) |
+| **E2E-14 ☆ Gia sư tạo khung giờ trống** | tutor1 login → "Lịch trống" (S-18) → "Thêm khung giờ" nhập ngày + giờ (GMT+7) → lưu; mở hồ sơ công khai của tutor1 bằng student1 | Toast "Đã thêm khung giờ."; API `GET /tutor/slots` có slot `AVAILABLE`; thẻ slot hiện "Trống" ở lịch gia sư và nút slot chọn được ở trang công khai `/gia-su/{id}` (US-TUT-03) |
+| **E2E-15 ☆ Gia sư nhận buổi học và mở chi tiết** | tutor1 tạo slot (API) → student1 đặt + thanh toán Thành công (UI) → tutor1 vào "Buổi dạy" (S-20) → "Chi tiết" (S-21) | Buổi hiện ở tab "Sắp tới" với tên học viên + "Đã xác nhận"; S-21 hiện tên học viên, mã booking, giờ GMT+7, học phí; nút "Huỷ buổi dạy" bật (US-TUT-04) |
+| **E2E-16 ☆ Gia sư thấy đánh giá của học viên** | booking `CONFIRMED` đã kết thúc (DB `finishLesson`) → student1 gửi 4★ + nhận xét (S-14) → tutor1 mở "Đánh giá" (S-23) | S-23 liệt kê đúng nhận xét, tên học viên, 4 sao; tổng số đánh giá hiển thị (US-TUT-06, US-STU-07) |
+| **E2E-17 ☆ Gia sư không vào được admin** | tutor1 mở `/admin`, `/admin/nguoi-dung`, `/admin/booking`; gọi `GET /admin/stats|users|bookings` | UI chuyển tới `/403` với thông báo từ `vi.json`; API trả 403 (Security: phân quyền theo vai trò) |
 
 Ghi chú phạm vi: E2E-01..05 + 06..08 + 10 là nòng cốt theo yêu cầu T10 (thành công/thất bại/hết hạn, huỷ & hoàn tiền, email Mailpit). Các ca ☆ chạy sau khi nòng cốt xanh, tận dụng cùng fixture.
 
