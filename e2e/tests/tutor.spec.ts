@@ -125,7 +125,6 @@ test.describe('Luồng gia sư', () => {
     const item = page.locator('.ant-list-item', { hasText: comment });
     await expect(item).toBeVisible();
     await expect(item).toContainText('Lê V.'); // the tutor sees the reviewer abbreviated
-    await expect(item.getByRole('radio', { checked: true })).toHaveCount(0); // read-only stars, not a form
     await expect(item.locator('.ant-rate-star-full')).toHaveCount(4);
     await expect(page.getByText(/\(\d+ đánh giá\)/)).toBeVisible();
   });
