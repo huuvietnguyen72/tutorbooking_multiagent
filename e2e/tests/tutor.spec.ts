@@ -82,9 +82,16 @@ test.describe('Luồng gia sư', () => {
     await page.goto('/gia-su/buoi-day');
     const row = page.locator('.ant-list-item', { hasText: range }).filter({ hasText: 'Lê Học Viên' });
     // Upcoming sessions are ordered by time; a far-future slot may sit on a later page.
-    const nextPage = page.locator('.ant-pagination-next');
-    for (let i = 0; i < 20 && !(await row.first().isVisible()) && (await nextPage.getAttribute('aria-disabled')) !== 'true'; i++) {
-      await nextPage.click();
+    // The list swaps to a spinner (no pager) while a page loads, so wait for each page's rows before looking at the pager.
+    await expect(page.locator('.ant-list-item').first()).toBeVisible();
+    for (let i = 0; i < 30 && !(await row.first().isVisible()); i++) {
+      const nextPage = page.locator('.ant-pagination-next');
+      if ((await nextPage.getAttribute('aria-disabled')) === 'true') break;
+      await Promise.all([
+        page.waitForResponse((r) => r.url().includes('/tutor/bookings') && r.request().method() === 'GET' && r.ok()),
+        nextPage.click(),
+      ]);
+      await expect(page.locator('.ant-list-item').first()).toBeVisible();
     }
     await expect(row.first()).toBeVisible();
     await expect(row.first().getByText('Đã xác nhận')).toBeVisible();
@@ -117,7 +124,7 @@ test.describe('Luồng gia sư', () => {
     await expect(page.getByRole('heading', { name: 'Đánh giá nhận được' })).toBeVisible();
     const item = page.locator('.ant-list-item', { hasText: comment });
     await expect(item).toBeVisible();
-    await expect(item).toContainText('Lê Học Viên');
+    await expect(item).toContainText('Lê V.'); // the tutor sees the reviewer abbreviated
     await expect(item.getByRole('radio', { checked: true })).toHaveCount(0); // read-only stars, not a form
     await expect(item.locator('.ant-rate-star-full')).toHaveCount(4);
     await expect(page.getByText(/\(\d+ đánh giá\)/)).toBeVisible();
