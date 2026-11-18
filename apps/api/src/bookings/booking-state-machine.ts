@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ActorType, Booking, BookingStatus, Payment, Prisma } from '@prisma/client';
 import { Clock } from '../common/clock';
 import { PAYMENT_PROVIDER, PaymentProvider } from '../payments/payment-provider';
+import { notifyBooking } from '../notifications/notification-events';
 import { formatBookingCode } from './booking-code';
 import { isHoldExpired } from './booking.policy';
 
@@ -126,6 +127,7 @@ export class BookingStateMachine {
     await this.history(tx, booking, 'CONFIRMED', PROVIDER, 'PAID');
     const next = await this.reload(tx, booking.id);
     await this.enqueue(tx, next, 'booking_confirmed', ['student', 'tutor']);
+    await notifyBooking(tx, 'confirmed', next);
     return next;
   }
 
@@ -156,6 +158,7 @@ export class BookingStateMachine {
       refunded: next.payment?.status === 'REFUNDED',
       reason: reason ?? undefined,
     });
+    await notifyBooking(tx, 'cancelled', next);
     return next;
   }
 
@@ -194,6 +197,7 @@ export class BookingStateMachine {
       oldStartAt: booking.startAt.toISOString(),
       oldEndAt: booking.endAt.toISOString(),
     });
+    await notifyBooking(tx, 'rescheduled', next);
     return next;
   }
 
