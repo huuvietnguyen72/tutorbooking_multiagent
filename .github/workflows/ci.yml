@@ -121,7 +121,7 @@ jobs:
         run: |
           set -a; . ./.env; set +a
           npm run e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
@@ -132,7 +132,7 @@ jobs:
       - name: Dump compose logs on failure
         if: failure()
         run: docker compose logs --tail 300 > e2e/compose-logs.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: compose-logs
