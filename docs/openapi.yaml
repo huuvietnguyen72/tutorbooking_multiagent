@@ -21,6 +21,7 @@ tags:
   - name: tutor
   - name: student
   - name: payments
+  - name: notifications
   - name: admin
   - name: system
 
@@ -785,6 +786,52 @@ paths:
         - { $ref: '#/components/parameters/PageSize' }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuditLogPage' } } } }
+  /notifications:
+    get:
+      tags: [notifications]
+      operationId: listNotifications
+      summary: List my notifications
+      x-roles: [STUDENT, TUTOR]
+      description: In-app notifications of the caller only, newest first.
+      parameters:
+        - { name: unreadOnly, in: query, schema: { type: boolean, default: false } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/NotificationPage' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /notifications/unread-count:
+    get:
+      tags: [notifications]
+      operationId: countUnreadNotifications
+      summary: Unread notification count
+      x-roles: [STUDENT, TUTOR]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, required: [count], properties: { count: { type: integer } } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /notifications/read-all:
+    post:
+      tags: [notifications]
+      operationId: readAllNotifications
+      summary: Mark all my notifications read
+      x-roles: [STUDENT, TUTOR]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, required: [updated], properties: { updated: { type: integer } } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /notifications/{notificationId}/read:
+    post:
+      tags: [notifications]
+      operationId: readNotification
+      summary: Mark one notification read
+      x-roles: [STUDENT, TUTOR]
+      description: Idempotent. Another user's notification returns 404.
+      parameters: [ { name: notificationId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Notification' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
 components:
   securitySchemes:
@@ -1125,6 +1172,20 @@ components:
         reason: { type: [string, 'null'] }
         createdAt: { type: string, format: date-time }
 
+    Notification:
+      type: object
+      required: [id, type, title, body, bookingId, isRead, readAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [BOOKING_CONFIRMED, BOOKING_CANCELLED, BOOKING_RESCHEDULED, REVIEW_RECEIVED] }
+        title: { type: string }
+        body: { type: string }
+        bookingId: { type: [string, 'null'], format: uuid }
+        isRead: { type: boolean }
+        readAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+    NotificationPage:
+      allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Notification' } } } } ]
     PageMeta:
       type: object
       required: [page, pageSize, total]
