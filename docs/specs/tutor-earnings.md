@@ -15,7 +15,7 @@ Ngoài phạm vi (xem §7): rút tiền thật, xuất hoá đơn/thuế, báo c
 | `Booking.priceVnd` là giá chốt lúc đặt; `startAt`, `endAt`, `status`. | Không có khái niệm phí nền tảng hay hoa hồng, ở cả schema lẫn cấu hình. |
 | `Payment.amountVnd`, `status` (`PENDING/PAID/FAILED/REFUNDED`), `paidAt`, `refundedAt`. | Không có đối soát hay chi trả cho gia sư (không có bảng settlement/payout). |
 | `isFinished(booking, now)` = `CONFIRMED` và `endAt <= now` (`booking.policy.ts`). Booking không có trạng thái `COMPLETED`. | Gia sư chưa có endpoint tổng hợp thu nhập. |
-| `GET /tutor/bookings?scope` và `/tutor/bookings/{id}` có sẵn. Theo kiến trúc §3.4 DTO gia sư **không** trả payment. | Không có `TutorEarnings*` DTO. |
+| `GET /tutor/bookings?scope` và `/tutor/bookings/{id}` có sẵn. Theo kiến trúc §2.8 DTO gia sư **không** trả payment. | Không có `TutorEarnings*` DTO. |
 | Múi giờ hiển thị `Asia/Ho_Chi_Minh` (GMT+7). | |
 
 Hệ quả: **phí nền tảng và đối soát là khái niệm mới** cần quyết định (câu hỏi mở Q1, Q2). Bản đặc tả này đề xuất một mặc định đơn giản để làm được ngay, với giả định rõ ràng ở §4.
@@ -45,7 +45,7 @@ Là gia sư, tôi muốn biết buổi nào bị hoàn tiền để hiểu vì s
 
 - AC1: Buổi có payment `REFUNDED` hoặc booking `CANCELLED_*` **không** tính vào số buổi, gross, phí, net.
 - AC2: Các buổi đó hiện ở mục riêng "Buổi bị huỷ/hoàn tiền" (chỉ mã, giờ, giá, lý do hiển thị cho gia sư), không cộng vào tổng.
-- AC3: Booking đã diễn ra rồi Admin hoàn thủ công (kiến trúc §2.5, Q4): nằm trong mục này; nếu hoàn **sau** khi tháng đã đối soát thì xử lý theo Q3.
+- AC3: Booking đã diễn ra rồi Admin hoàn thủ công (kiến trúc §2.5, đề xuất Q4 của tài liệu đó): nằm trong mục này; nếu hoàn **sau** khi tháng đã đối soát thì xử lý theo Q3.
 
 ### US-TUT-EARN-04 — Phân quyền và riêng tư
 - AC1: Chỉ `TUTOR` gọi được. `STUDENT` → 403, chưa đăng nhập → 401.
@@ -119,4 +119,4 @@ Mặc định ở cột "Đề xuất" được dùng cho các AC trên cho đ�
 2. Hai endpoint đọc + DTO allow-list + test (đơn vị công thức §4.2, tích hợp phân quyền §US-04, tổng khớp chi tiết).
 3. Màn S-29/S-30 + test giao diện.
 4. Chức năng Admin đánh dấu đối soát (phụ thuộc Q2).
-5. Cập nhật `docs/openapi.yaml`, `docs/test-plan.md`, `docs/architecture.md` §3.4.
+5. Cập nhật `docs/openapi.yaml`, `docs/test-plan.md`, `docs/architecture.md` §2.8.
