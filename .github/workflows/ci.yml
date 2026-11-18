@@ -17,7 +17,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20.18.1'
@@ -46,7 +46,7 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://tutor:postgres@127.0.0.1:5432/tutor_booking_test?schema=public
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20.18.1'
@@ -64,7 +64,7 @@ jobs:
     name: Build
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20.18.1'
@@ -76,7 +76,7 @@ jobs:
     name: Compose config
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate docker-compose.yml
         run: |
           cp .env.example .env
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20.18.1'
@@ -146,7 +146,7 @@ jobs:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
@@ -158,7 +158,7 @@ jobs:
     name: npm audit
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20.18.1'
