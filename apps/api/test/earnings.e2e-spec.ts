@@ -394,4 +394,99 @@ describe('tutor earnings (QUA-54)', () => {
       ]);
     });
   });
+
+  describe('admin read (QUA-76)', () => {
+    const list = (query = '', who: User | undefined = admin) => get(t.app, `/admin/earnings${query}`, who?.cookie);
+    const tutorItems = (tutorId: string, query = '', who: User | undefined = admin) =>
+      get(t.app, `/admin/tutors/${tutorId}/earnings/items${query}`, who?.cookie);
+
+    it('401 without a session, 403 for student and tutor', async () => {
+      expect((await list('', undefined)).status).toBe(401);
+      expect((await list('?month=2026-05', student)).status).toBe(403);
+      expect((await list('?month=2026-05', tutor)).status).toBe(403);
+      expect((await tutorItems(tutor.id, '?month=2026-05', undefined)).status).toBe(401);
+      expect((await tutorItems(tutor.id, '?month=2026-05', student)).status).toBe(403);
+      expect((await tutorItems(tutor.id, '?month=2026-05', tutor)).status).toBe(403);
+    });
+
+    it.each([
+      ['malformed month', '?month=2026-6'],
+      ['month 13', '?month=2026-13'],
+      ['future month', '?month=2026-07'],
+      ['older than 24 months', '?month=2024-06'],
+      ['unknown param', '?foo=1'],
+      ['pageSize over 100', '?pageSize=101'],
+    ])('%s -> 400', async (_n, q) => {
+      expect((await list(q)).status).toBe(400);
+      expect((await tutorItems(tutor.id, q)).status).toBe(400);
+    });
+
+    it('items: bad tutor id -> 400, unknown or non-tutor -> 404', async () => {
+      expect((await tutorItems('not-a-uuid', '?month=2026-05')).status).toBe(400);
+      expect((await tutorItems(UUID0, '?month=2026-05')).status).toBe(404);
+      expect((await tutorItems(student.id, '?month=2026-05')).status).toBe(404);
+    });
+
+    it('lists tutors with sessions in the month and matches the tutor own report and the item rows', async () => {
+      const other = await f.addTutor();
+      await t.prisma.user.update({ where: { id: other.id }, data: { fullName: 'Aaa Other' } });
+      await session('2026-05-10T03:00:00Z', 200_000);
+      await session('2026-05-11T03:00:00Z', 150_000, { settledAt: NOW });
+      await session('2026-05-12T03:00:00Z', 333_333);
+      await session('2026-05-12T03:00:00Z', 100_000, { tutorId: other.id });
+      await session('2026-05-13T03:00:00Z', 90_000, { payment: 'PENDING', status: 'PENDING_PAYMENT' }); // not counted
+      await session('2026-06-01T03:00:00Z', 50_000); // other month
+
+      const res = await list('?month=2026-05');
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ month: '2026-05', monthClosed: true, total: 2, page: 1 });
+      expect(res.body.items.map((r: { tutorId: string }) => r.tutorId)).toEqual([other.id, tutor.id]);
+      const row = res.body.items[1];
+      expect(row).toMatchObject({ sessionCount: 3, settledCount: 1, unsettledCount: 2 });
+
+      const own = (await summary('?month=2026-05')).body;
+      expect(row).toMatchObject({
+        sessionCount: own.sessionCount,
+        grossVnd: own.grossVnd,
+        platformFeeVnd: own.platformFeeVnd,
+        netVnd: own.netVnd,
+        settledNetVnd: own.settledNetVnd,
+        unsettledNetVnd: own.unsettledNetVnd,
+      });
+
+      const detail = await tutorItems(tutor.id, '?month=2026-05');
+      expect(detail.status).toBe(200);
+      expect(detail.body.items.reduce((sum: number, i: { netVnd: number }) => sum + i.netVnd, 0)).toBe(row.netVnd);
+      expect(detail.body.items.filter((i: { settled: boolean }) => i.settled)).toHaveLength(row.settledCount);
+      expect(detail.body.items[0]).toEqual(expect.objectContaining({ bookingId: expect.any(String), studentName: 'Nguyen Van An', startAt: expect.any(String) }));
+    });
+
+    it('monthClosed is false for the running month; an empty month lists nothing', async () => {
+      await session('2026-06-10T03:00:00Z', 100_000);
+      expect((await list('')).body).toMatchObject({ month: '2026-06', monthClosed: false, total: 1 });
+      const empty = await list('?month=2026-04');
+      expect(empty.body).toMatchObject({ monthClosed: true, total: 0, items: [] });
+    });
+
+    it('paginates the tutor list', async () => {
+      const other = await f.addTutor();
+      await session('2026-05-10T03:00:00Z', 100_000);
+      await session('2026-05-10T03:00:00Z', 100_000, { tutorId: other.id });
+      const page2 = (await list('?month=2026-05&pageSize=1&page=2')).body;
+      expect(page2).toMatchObject({ total: 2, page: 2, pageSize: 1 });
+      expect(page2.items).toHaveLength(1);
+    });
+
+    it('reflects the settlement afterwards', async () => {
+      await session('2026-05-10T03:00:00Z', 200_000);
+      await session('2026-05-11T03:00:00Z', 150_000);
+      await settle(admin, tutor.id, '2026-05');
+
+      const row = (await list('?month=2026-05')).body.items[0];
+      expect(row).toMatchObject({ netVnd: 315_000, settledNetVnd: 315_000, unsettledNetVnd: 0, settledCount: 2, unsettledCount: 0 });
+      const detail = (await tutorItems(tutor.id, '?month=2026-05')).body.items;
+      expect(detail).toHaveLength(2);
+      for (const i of detail) expect(i).toMatchObject({ settled: true, settledAt: NOW.toISOString() });
+    });
+  });
 });

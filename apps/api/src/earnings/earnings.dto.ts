@@ -19,6 +19,14 @@ export const earningsItemsQuerySchema = z
   })
   .strict();
 
+export const adminEarningsQuerySchema = z
+  .object({
+    month: monthSchema.optional(),
+    page: intParam.min(1).max(100_000).default(1),
+    pageSize: intParam.min(1).max(100).default(20),
+  })
+  .strict();
+
 export const settlementBodySchema = z.object({}).strict();
 
 export interface EarningsSummaryDto {
@@ -91,4 +99,27 @@ export interface SettlementResultDto {
   settledCount: number;
   alreadySettledCount: number;
   settledNetVnd: number;
+}
+
+export interface AdminEarningsRowDto {
+  tutorId: string;
+  tutorName: string;
+  sessionCount: number;
+  grossVnd: number;
+  platformFeeVnd: number;
+  netVnd: number;
+  settledNetVnd: number;
+  unsettledNetVnd: number;
+  settledCount: number;
+  unsettledCount: number;
+}
+
+export interface AdminEarningsDto {
+  month: string;
+  /** True once the month has ended (Asia/Ho_Chi_Minh), i.e. PUT settlement is accepted for it. */
+  monthClosed: boolean;
+  page: number;
+  pageSize: number;
+  total: number;
+  items: AdminEarningsRowDto[];
 }

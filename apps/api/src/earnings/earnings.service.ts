@@ -53,14 +53,14 @@ export class EarningsService {
   }
 
   /**
-   * CONFIRMED, finished, PAID, ending in the month (§4.1). A payment refunded *after* its month was
+   * CONFIRMED, finished, PAID, ending in the month (§4.1); `tutorId` undefined spans every tutor (admin list). A payment refunded *after* its month was
    * settled stays here, so the closed month never changes; the refund shows up as an adjustment (Q3).
    */
-  eligibleWhere(tutorId: string, range: MonthRange, settlement: Settlement = 'all'): Prisma.PaymentWhereInput {
+  eligibleWhere(tutorId: string | undefined, range: MonthRange, settlement: Settlement = 'all'): Prisma.PaymentWhereInput {
     return {
       OR: [{ status: 'PAID' }, { status: 'REFUNDED', settledAt: { not: null } }],
       ...(settlement === 'settled' ? { settledAt: { not: null } } : settlement === 'unsettled' ? { settledAt: null } : {}),
-      booking: { tutorId, status: 'CONFIRMED', endAt: { gte: range.from, lt: range.to, lte: this.clock.now() } },
+      booking: { ...(tutorId ? { tutorId } : {}), status: 'CONFIRMED', endAt: { gte: range.from, lt: range.to, lte: this.clock.now() } },
     };
   }
 

@@ -811,6 +811,40 @@ paths:
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /admin/earnings:
+    get:
+      tags: [admin]
+      operationId: adminListEarnings
+      summary: Tutors' earnings for a month
+      x-roles: [ADMIN]
+      description: |
+        Read-only. One row per tutor with counted sessions in the month (same rules and per-session fee as `GET /tutor/earnings`, so each row equals what that tutor sees), ordered by name.
+        `monthClosed` is true once the month has ended; only then does `PUT .../settlement` accept it. `month` defaults to the current month; invalid, future or older than 24 months is 400.
+      parameters:
+        - { name: month, in: query, schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$', example: '2026-05' } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminEarnings' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+  /admin/tutors/{tutorId}/earnings/items:
+    get:
+      tags: [admin]
+      operationId: adminListTutorEarningItems
+      summary: Sessions behind a tutor's monthly earnings
+      x-roles: [ADMIN]
+      description: Read-only; same body and parameters as `GET /tutor/earnings/items` for that tutor (404 when the user is not a tutor).
+      parameters:
+        - { $ref: '#/components/parameters/TutorId' }
+        - { name: month, in: query, schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$', example: '2026-05' } }
+        - { name: settlement, in: query, schema: { type: string, enum: [all, settled, unsettled], default: all } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { name: sort, in: query, schema: { type: string, enum: ['startAt:desc', 'startAt:asc'], default: 'startAt:desc' } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorEarningItems' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /admin/reviews/{reviewId}:
     patch:
       tags: [admin]
@@ -1303,6 +1337,29 @@ components:
             items: { type: array, items: { $ref: '#/components/schemas/TutorEarningItem' } }
             cancelled: { type: array, items: { $ref: '#/components/schemas/TutorEarningCancelled' } }
             adjustments: { type: array, items: { $ref: '#/components/schemas/TutorEarningAdjustment' } }
+    AdminEarningsRow:
+      type: object
+      required: [tutorId, tutorName, sessionCount, grossVnd, platformFeeVnd, netVnd, settledNetVnd, unsettledNetVnd, settledCount, unsettledCount]
+      properties:
+        tutorId: { type: string, format: uuid }
+        tutorName: { type: string }
+        sessionCount: { type: integer }
+        grossVnd: { type: integer }
+        platformFeeVnd: { type: integer }
+        netVnd: { type: integer }
+        settledNetVnd: { type: integer }
+        unsettledNetVnd: { type: integer }
+        settledCount: { type: integer }
+        unsettledCount: { type: integer }
+    AdminEarnings:
+      allOf:
+        - { $ref: '#/components/schemas/PageMeta' }
+        - type: object
+          required: [month, monthClosed, items]
+          properties:
+            month: { type: string }
+            monthClosed: { type: boolean, description: the month has ended, so it can be settled }
+            items: { type: array, items: { $ref: '#/components/schemas/AdminEarningsRow' } }
     SettlementResult:
       type: object
       required: [tutorId, month, settledCount, alreadySettledCount, settledNetVnd]
