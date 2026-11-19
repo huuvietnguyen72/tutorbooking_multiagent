@@ -197,6 +197,11 @@ Mỗi dòng: ID | cấp | AC | nội dung & assert chính.
 | TC-SYS-09 | I,R | — | Security headers (helmet/CSP `default-src 'self'`), CORS tắt, `X-Powered-By` tắt, lỗi không lộ stack (checklist 22); log không chứa mật khẩu/token/secret/`providerRef` (test log scrub) |
 | TC-SYS-10 | I | — | Validation: `additionalProperties:false` mọi DTO — gửi thừa `studentId`/`tutorId`/`price`/`status`/`role` → 400 (checklist 9); `ParseUUIDPipe` mọi `:id`; `sort` ngoài whitelist → 400 (checklist 18) |
 | TC-SYS-11 | R | — | Khởi động fail khi secret thiếu/ngắn/giá trị mẫu/trùng nhau (mọi môi trường trừ `test`) (checklist 21); gitleaks + `npm audit` xanh trong CI |
+| TC-EARN-01 | U,I | QUA-54 | Phí làm tròn half-up theo từng buổi rồi mới cộng (`earnings.calc.spec.ts`, `earnings.e2e-spec.ts`); tổng các dòng `items` khớp chính xác `GET /tutor/earnings` qua nhiều trang và bộ lọc đối soát |
+| TC-EARN-02 | I | QUA-54 | Phân quyền: 401/403 cho tutor endpoint và API đối soát Admin; tham số lạ, tháng sai/tương lai/quá 24 tháng, `sort`/`settlement` ngoài whitelist, `pageSize>100` → 400 |
+| TC-EARN-03 | I | QUA-54 | Tháng rỗng trả 0 + `isEmpty`; ranh giới tháng GMT+7 theo `endAt`; loại buổi chưa kết thúc/PENDING/REFUNDED/gia sư khác; buổi huỷ/hoàn ở mục riêng; DTO không lộ email, `providerRef`, `refundRef` |
+| TC-EARN-04 | I | QUA-54 | Snapshot phí lúc `CONFIRMED` không đổi khi đổi `FEE_RATE`; payment cũ chưa có snapshot dùng tỉ lệ cấu hình |
+| TC-EARN-05 | I | QUA-54 | Đối soát: idempotent, đúng một dòng audit, không đụng tháng/gia sư khác, từ chối tháng chưa kết thúc; hoàn tiền sau đối soát hiện ở "điều chỉnh" của tháng hoàn và không đổi số tháng đã chốt |
 
 ### 5.10 Ánh xạ checklist bảo mật 23 mục (Security E) → test
 

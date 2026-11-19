@@ -55,6 +55,7 @@ describe('validateEnv', () => {
         CANCELLATION_WINDOW_HOURS: 24,
         EXPIRY_JOB_INTERVAL_SECONDS: 30,
         PAYMENT_PROVIDER: 'mock',
+        FEE_RATE: 0.1,
         INTERNAL_WEBHOOK_BASE_URL: 'http://127.0.0.1:3000',
       });
     });
@@ -68,6 +69,13 @@ describe('validateEnv', () => {
 
     it('takes the webhook base URL from configuration only, without a trailing slash', () => {
       expect(validateEnv({ ...base, INTERNAL_WEBHOOK_BASE_URL: 'http://api:3000/' }).INTERNAL_WEBHOOK_BASE_URL).toBe('http://api:3000');
+    });
+
+    it('parses FEE_RATE and rejects values outside 0..1 or with more than 4 decimals', () => {
+      expect(validateEnv({ ...base, FEE_RATE: '0.125' }).FEE_RATE).toBe(0.125);
+      expect(() => validateEnv({ ...base, FEE_RATE: '1.5' })).toThrow(/FEE_RATE/);
+      expect(() => validateEnv({ ...base, FEE_RATE: '-0.1' })).toThrow(/FEE_RATE/);
+      expect(() => validateEnv({ ...base, FEE_RATE: '0.12345' })).toThrow(/FEE_RATE/);
     });
 
     it('rejects nonsense values', () => {

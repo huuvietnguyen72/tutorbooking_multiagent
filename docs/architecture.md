@@ -193,6 +193,7 @@ Service nghiệp vụ `INSERT email_outbox` **trong cùng giao dịch** với th
    - ID là UUID v4 (không đoán được), nhưng **không** coi UUID là biện pháp phân quyền.
    - Endpoint công khai về gia sư chỉ trả gia sư `APPROVED`; slot công khai chỉ trả `AVAILABLE`, ở tương lai, không lộ thông tin học viên.
    - DTO response tách theo vai trò, mapper dạng allow-list (không `return entity`): `StudentBooking`, `TutorBooking` (chỉ tên học viên, giờ, giá, trạng thái; không có payment, hold, lý do huỷ của học viên, email), `AdminBookingDetail`; `PublicReview` không có `bookingId`. Có test snapshot.
+   - Báo cáo thu nhập (QUA-54): `GET /tutor/earnings[/items]` chỉ lấy `tutorId` từ phiên; DTO allow-list (không email học viên, `providerRef`, `refundRef`); tham số lạ → 400. Phí chốt trên `payments.fee_rate/platform_fee_vnd` lúc `CONFIRMED` (`FEE_RATE`, mặc định 0.10), đối soát là `payments.settled_at/settled_by` do Admin đặt qua `PUT /admin/tutors/{tutorId}/earnings/{month}/settlement` (một chiều, idempotent, có audit `TUTOR_EARNINGS_SETTLED`).
    - Quyết định duyệt gia sư với user không phải TUTOR trả 404. `{action}` là enum. Không khoá được Admin.
    - Mỗi resource có test integration "user A truy cập tài nguyên của B → 404/403" (bắt buộc trong DoD P3).
 

@@ -1,6 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ActorType, Booking, BookingStatus, Payment, Prisma } from '@prisma/client';
 import { Clock } from '../common/clock';
+import { APP_ENV } from '../common/config';
+import type { Env } from '../config/env';
+import { platformFee, toRateBp } from '../earnings/earnings.calc';
 import { PAYMENT_PROVIDER, PaymentProvider } from '../payments/payment-provider';
 import { notifyBooking } from '../notifications/notification-events';
 import { formatBookingCode } from './booking-code';
@@ -44,6 +47,7 @@ export class BookingStateMachine {
   constructor(
     private readonly clock: Clock,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    @Inject(APP_ENV) private readonly env: Env,
   ) {}
 
   /** `SELECT … FOR UPDATE` on the booking, then loads it with payment and both parties. */
@@ -122,7 +126,17 @@ export class BookingStateMachine {
     const now = this.clock.now();
     await this.lockSlots(tx, [booking.slotId]);
     await tx.booking.update({ where: { id: booking.id }, data: { status: 'CONFIRMED', holdExpiresAt: null } });
-    await tx.payment.update({ where: { id: booking.payment!.id }, data: { status: 'PAID', paidAt: now } });
+    // QUA-54: the fee is fixed here, so a later FEE_RATE change never rewrites past earnings.
+    const feeRate = toRateBp(this.env.FEE_RATE);
+    await tx.payment.update({
+      where: { id: booking.payment!.id },
+      data: {
+        status: 'PAID',
+        paidAt: now,
+        feeRate: feeRate / 10_000,
+        platformFeeVnd: platformFee(booking.payment!.amountVnd, feeRate),
+      },
+    });
     await tx.slot.update({ where: { id: booking.slotId }, data: { status: 'BOOKED' } });
     await this.history(tx, booking, 'CONFIRMED', PROVIDER, 'PAID');
     const next = await this.reload(tx, booking.id);

@@ -37,6 +37,13 @@ const envSchema = z
     MAIL_FROM: z.string().min(3).default('Tutor Booking <no-reply@tutor.local>'),
     /** 0 disables the in-process outbox worker (tests drive it by hand). */
     MAIL_WORKER_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(15),
+    /** Platform fee as a fraction of the price (0.10 = 10%), at most 4 decimals; fixed per payment at CONFIRMED. */
+    FEE_RATE: z.coerce
+      .number()
+      .min(0)
+      .max(1)
+      .refine((rate) => Math.abs(rate * 10_000 - Math.round(rate * 10_000)) < 1e-6, 'FEE_RATE must have at most 4 decimals')
+      .default(0.1),
     PAYMENT_PROVIDER: z.enum(['mock', 'vnpay']).default('mock'),
     /** Off by default in production (B1); compose demo opts in through .env. */
     MOCK_GATEWAY_ENABLED: z.enum(['true', 'false']).optional(),
