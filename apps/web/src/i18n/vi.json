@@ -15,6 +15,7 @@
     "tutorProfile": "Hồ sơ",
     "tutorSlots": "Lịch trống",
     "tutorSessions": "Buổi dạy",
+    "tutorEarnings": "Thu nhập",
     "tutorReviews": "Đánh giá",
     "adminOverview": "Tổng quan",
     "adminTutors": "Duyệt gia sư",
@@ -334,6 +335,61 @@
     "keep": "Không huỷ",
     "confirm": "Xác nhận huỷ",
     "cancelled_ok": "Đã huỷ buổi dạy."
+  },
+  "tutorEarnings": {
+    "title": "Thu nhập",
+    "month": "Tháng",
+    "monthHint": "Chọn tháng (tối đa 24 tháng gần nhất)",
+    "feeNote": "Phí nền tảng là {{percent}}% giá buổi.",
+    "feeNoteMixed": "Các buổi trong tháng này có tỉ lệ phí nền tảng khác nhau.",
+    "monthNote": "Buổi học được tính vào tháng kết thúc buổi học (giờ GMT+7).",
+    "loadError": "Không tải được thu nhập.",
+    "empty": "Chưa có buổi dạy nào trong tháng này",
+    "emptyHint": "Chỉ các buổi đã kết thúc và đã thanh toán mới được tính.",
+    "stats": {
+      "sessions": "Số buổi đã dạy",
+      "gross": "Tổng tiền thu",
+      "fee": "Phí nền tảng",
+      "net": "Thực nhận",
+      "settled": "Đã đối soát",
+      "unsettled": "Chưa đối soát"
+    },
+    "detail": {
+      "title": "Chi tiết buổi dạy trong tháng",
+      "filter": "Lọc theo đối soát",
+      "all": "Tất cả",
+      "settled": "Đã đối soát",
+      "unsettled": "Chưa đối soát",
+      "sort": "Sắp xếp theo giờ học",
+      "sortDesc": "Mới nhất trước",
+      "sortAsc": "Cũ nhất trước",
+      "loadError": "Không tải được chi tiết buổi dạy.",
+      "empty": "Không có buổi dạy nào khớp bộ lọc.",
+      "code": "Mã booking",
+      "student": "Học viên",
+      "time": "Giờ học (GMT+7)",
+      "price": "Giá",
+      "fee": "Phí nền tảng",
+      "net": "Thực nhận",
+      "status": "Đối soát",
+      "settledAt": "Đã đối soát {{date}}"
+    },
+    "cancelled": {
+      "title": "Buổi bị huỷ/hoàn tiền",
+      "count": "{{count}} buổi",
+      "none": "Không có buổi nào bị huỷ hoặc hoàn tiền trong tháng.",
+      "notCounted": "Các buổi này không được cộng vào số liệu ở trên.",
+      "refunded": "Đã hoàn tiền",
+      "cancelled": "Đã huỷ",
+      "byRole": "Huỷ bởi {{role}}",
+      "reason": "Lý do: {{reason}}",
+      "roles": { "STUDENT": "học viên", "TUTOR": "gia sư", "ADMIN": "quản trị viên" }
+    },
+    "adjustments": {
+      "title": "Điều chỉnh hoàn tiền",
+      "hint": "Hoàn tiền trong tháng này cho buổi thuộc tháng đã đối soát. Không cộng vào số liệu ở trên.",
+      "refundedAt": "Hoàn ngày {{date}}"
+    }
   },
   "tutorReviews": {
     "title": "Đánh giá nhận được",

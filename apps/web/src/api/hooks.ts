@@ -7,6 +7,7 @@ import type {
   AdminTutorParams,
   AdminUserParams,
   AuditLogParams,
+  EarningItemsParams,
   Me,
   RegisterRequest,
   StudentScope,
@@ -169,6 +170,21 @@ export function useMyTeachingBookings(scope: TeachingScope, page: number, pageSi
   return useQuery({
     queryKey: ['my', 'bookings', scope, page, pageSize],
     queryFn: ({ signal }) => api.listMyTeachingBookings(scope, page, pageSize, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useMyEarnings(month: string) {
+  return useQuery({
+    queryKey: ['my', 'earnings', month],
+    queryFn: ({ signal }) => api.getMyEarnings(month, signal),
+  });
+}
+
+export function useMyEarningItems(params: EarningItemsParams) {
+  return useQuery({
+    queryKey: ['my', 'earnings', 'items', params],
+    queryFn: ({ signal }) => api.listMyEarningItems(params, signal),
     placeholderData: keepPreviousData,
   });
 }

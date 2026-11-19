@@ -90,6 +90,16 @@ export function formatWeekLabel(weekStartIso: string): string {
   return `${start.format('DD')}–${end.format('DD/MM/YYYY')}`;
 }
 
+/** `YYYY-MM` of the current month in the display timezone, `offset` months back (0 = this month). */
+export function monthKey(offset = 0): string {
+  return inVn(new Date()).subtract(offset, 'month').format('YYYY-MM');
+}
+
+/** `06/2026` for an API `YYYY-MM` month. */
+export function formatMonth(month: string): string {
+  return dayjs(month, 'YYYY-MM').format('MM/YYYY');
+}
+
 /** mm:ss countdown text, clamped at 00:00. */
 export function formatCountdown(remainingMs: number): string {
   const total = Math.max(0, Math.floor(remainingMs / 1000));

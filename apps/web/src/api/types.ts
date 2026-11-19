@@ -19,6 +19,20 @@ export type SlotStatus = S['SlotStatus'];
 export type BookingStatus = S['BookingStatus'];
 export type TutorBooking = S['TutorBooking'];
 export type TutorBookingPage = S['TutorBookingPage'];
+export type TutorEarningsSummary = S['TutorEarningsSummary'];
+export type TutorEarningItem = S['TutorEarningItem'];
+export type TutorEarningCancelled = S['TutorEarningCancelled'];
+export type TutorEarningAdjustment = S['TutorEarningAdjustment'];
+export type TutorEarningItems = S['TutorEarningItems'];
+export type EarningSettlementFilter = 'all' | 'settled' | 'unsettled';
+export type EarningSort = 'startAt:desc' | 'startAt:asc';
+export interface EarningItemsParams {
+  month: string;
+  settlement: EarningSettlementFilter;
+  page: number;
+  pageSize: number;
+  sort: EarningSort;
+}
 export type UserStatus = S['UserStatus'];
 export type PaymentStatus = S['PaymentStatus'];
 export type Payment = S['Payment'];
