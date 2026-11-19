@@ -207,6 +207,7 @@ model Booking {
 
   @@index([studentId, startAt])
   @@index([tutorId, startAt])
+  @@index([tutorId, endAt])
   @@index([status, holdExpiresAt])
   @@map("bookings")
 }
@@ -227,6 +228,12 @@ model Payment {
   refundRef          String?       @map("refund_ref")
   refundFailed       Boolean       @default(false) @map("refund_failed")
   refundedBy         String?       @map("refunded_by") @db.Uuid
+  /// Platform fee fixed when the booking is CONFIRMED (QUA-54); later FEE_RATE changes never touch it.
+  feeRate            Decimal?      @map("fee_rate") @db.Decimal(5, 4)
+  platformFeeVnd     Int?          @map("platform_fee_vnd")
+  /// Set once by an Admin when the tutor's month is settled; never cleared.
+  settledAt          DateTime?     @map("settled_at") @db.Timestamptz(3)
+  settledBy          String?       @map("settled_by") @db.Uuid
   createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 

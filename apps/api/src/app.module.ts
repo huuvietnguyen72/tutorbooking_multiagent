@@ -6,10 +6,11 @@ import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { TutorsModule } from './tutors/tutors.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { EarningsModule } from './earnings/earnings.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
-  imports: [CommonModule, AuthModule, TutorsModule, BookingsModule, AdminModule, MailModule, NotificationsModule],
+  imports: [CommonModule, AuthModule, TutorsModule, BookingsModule, AdminModule, MailModule, NotificationsModule, EarningsModule],
   controllers: [HealthController],
 })
 export class AppModule {}

@@ -464,6 +464,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tutor/earnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Monthly earnings summary
+         * @description Read-only (docs/specs/tutor-earnings.md). Counts CONFIRMED sessions that have ended and whose payment is PAID, in the month of `endAt` (Asia/Ho_Chi_Minh).
+         *     Fee per session = round half up(price x rate fixed when the booking was confirmed); totals add the per-session integers.
+         *     `month` defaults to the current month; future months and months older than 24 (current + 23 previous) are 400. Unknown parameters are 400.
+         */
+        get: operations["getMyEarnings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tutor/earnings/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sessions behind the monthly earnings
+         * @description `items` are the sessions counted in the summary of the same month: their sums equal the summary exactly. `cancelled` lists cancelled/refunded sessions of the month (not counted).
+         *     `adjustments` lists refunds made this month for sessions of an already settled month (Q3); they are never added to any figure.
+         */
+        get: operations["listMyEarningItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bookings": {
         parameters: {
             query?: never;
@@ -816,6 +859,27 @@ export interface paths {
          * @description PAID -> REFUNDED via PaymentProvider.refund. Second call -> 409 ALREADY_REFUNDED. Audited.
          */
         post: operations["adminRefundPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/tutors/{tutorId}/earnings/{month}/settlement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Settle a tutor's month
+         * @description Marks every unsettled, finished, PAID session of the tutor whose `endAt` is in `month` as settled (manual payout, Q2). Idempotent: a repeat settles nothing and writes no second audit row.
+         *     One-way (there is no un-settle), so closed figures never change. Only a month that has ended can be settled (409 INVALID_STATE otherwise). Body must be empty or `{}`.
+         */
+        put: operations["adminSettleTutorMonth"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1284,6 +1348,89 @@ export interface components {
         };
         NotificationPage: components["schemas"]["PageMeta"] & {
             items: components["schemas"]["Notification"][];
+        };
+        TutorEarningsSummary: {
+            /** @example 2026-06 */
+            month: string;
+            /** @enum {string} */
+            timezone: "Asia/Ho_Chi_Minh";
+            isEmpty: boolean;
+            sessionCount: number;
+            grossVnd: number;
+            platformFeeVnd: number;
+            /** @description grossVnd - platformFeeVnd */
+            netVnd: number;
+            settledNetVnd: number;
+            /** @description settledNetVnd + unsettledNetVnd = netVnd */
+            unsettledNetVnd: number;
+            /** @description Rate shared by all sessions of the month (0.1 = 10%); null when mixed; current config when the month is empty */
+            feeRate: number | null;
+            /** @description Negative net of refunds made this month for already settled sessions; not part of the figures above */
+            adjustmentsVnd: number;
+            adjustmentCount: number;
+        };
+        TutorEarningItem: {
+            /** Format: uuid */
+            bookingId: string;
+            code: string;
+            studentName: string;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            priceVnd: number;
+            platformFeeVnd: number;
+            netVnd: number;
+            settled: boolean;
+            /** Format: date-time */
+            settledAt: string | null;
+        };
+        TutorEarningCancelled: {
+            /** Format: uuid */
+            bookingId: string;
+            code: string;
+            studentName: string;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            priceVnd: number;
+            status: components["schemas"]["BookingStatus"];
+            refunded: boolean;
+            /** @enum {string|null} */
+            cancelledByRole: "STUDENT" | "TUTOR" | "ADMIN" | null;
+            /** @description only the tutor's own reason */
+            tutorCancelReason: string | null;
+        };
+        TutorEarningAdjustment: {
+            /** Format: uuid */
+            bookingId: string;
+            code: string;
+            studentName: string;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            /** Format: date-time */
+            refundedAt: string;
+            /** @description negative net amount that had been settled */
+            amountVnd: number;
+        };
+        TutorEarningItems: components["schemas"]["PageMeta"] & {
+            month: string;
+            items: components["schemas"]["TutorEarningItem"][];
+            cancelled: components["schemas"]["TutorEarningCancelled"][];
+            adjustments: components["schemas"]["TutorEarningAdjustment"][];
+        };
+        SettlementResult: {
+            /** Format: uuid */
+            tutorId: string;
+            month: string;
+            /** @description sessions settled by this call */
+            settledCount: number;
+            alreadySettledCount: number;
+            /** @description net of the sessions settled by this call */
+            settledNetVnd: number;
         };
         PageMeta: {
             page: number;
@@ -2142,6 +2289,58 @@ export interface operations {
             };
         };
     };
+    getMyEarnings: {
+        parameters: {
+            query?: {
+                month?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorEarningsSummary"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listMyEarningItems: {
+        parameters: {
+            query?: {
+                month?: string;
+                settlement?: "all" | "settled" | "unsettled";
+                page?: components["parameters"]["Page"];
+                pageSize?: components["parameters"]["PageSize"];
+                sort?: "startAt:desc" | "startAt:asc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorEarningItems"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     listMyBookings: {
         parameters: {
             query?: {
@@ -2803,6 +3002,32 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+        };
+    };
+    adminSettleTutorMonth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tutorId: components["parameters"]["TutorId"];
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettlementResult"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     adminHideReview: {

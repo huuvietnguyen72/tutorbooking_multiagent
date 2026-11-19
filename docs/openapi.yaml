@@ -414,6 +414,41 @@ paths:
         '409': { description: 'NOT_CONFIRMED | SESSION_STARTED', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
 
   # ---------------- student ----------------
+  /tutor/earnings:
+    get:
+      tags: [tutor]
+      operationId: getMyEarnings
+      summary: Monthly earnings summary
+      x-roles: [TUTOR]
+      description: |
+        Read-only (docs/specs/tutor-earnings.md). Counts CONFIRMED sessions that have ended and whose payment is PAID, in the month of `endAt` (Asia/Ho_Chi_Minh).
+        Fee per session = round half up(price x rate fixed when the booking was confirmed); totals add the per-session integers.
+        `month` defaults to the current month; future months and months older than 24 (current + 23 previous) are 400. Unknown parameters are 400.
+      parameters:
+        - { name: month, in: query, schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$', example: '2026-06' } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorEarningsSummary' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /tutor/earnings/items:
+    get:
+      tags: [tutor]
+      operationId: listMyEarningItems
+      summary: Sessions behind the monthly earnings
+      x-roles: [TUTOR]
+      description: |
+        `items` are the sessions counted in the summary of the same month: their sums equal the summary exactly. `cancelled` lists cancelled/refunded sessions of the month (not counted).
+        `adjustments` lists refunds made this month for sessions of an already settled month (Q3); they are never added to any figure.
+      parameters:
+        - { name: month, in: query, schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$', example: '2026-06' } }
+        - { name: settlement, in: query, schema: { type: string, enum: [all, settled, unsettled], default: all } }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - { name: sort, in: query, schema: { type: string, enum: ['startAt:desc', 'startAt:asc'], default: 'startAt:desc' } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TutorEarningItems' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /bookings:
     post:
       tags: [student]
@@ -759,6 +794,23 @@ paths:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Payment' } } } }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: 'ALREADY_REFUNDED | PAYMENT_NOT_REFUNDABLE', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  /admin/tutors/{tutorId}/earnings/{month}/settlement:
+    put:
+      tags: [admin]
+      operationId: adminSettleTutorMonth
+      summary: Settle a tutor's month
+      x-roles: [ADMIN]
+      description: |
+        Marks every unsettled, finished, PAID session of the tutor whose `endAt` is in `month` as settled (manual payout, Q2). Idempotent: a repeat settles nothing and writes no second audit row.
+        One-way (there is no un-settle), so closed figures never change. Only a month that has ended can be settled (409 INVALID_STATE otherwise). Body must be empty or `{}`.
+      parameters:
+        - { $ref: '#/components/parameters/TutorId' }
+        - { name: month, in: path, required: true, schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SettlementResult' } } } }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /admin/reviews/{reviewId}:
     patch:
       tags: [admin]
@@ -1186,6 +1238,80 @@ components:
         createdAt: { type: string, format: date-time }
     NotificationPage:
       allOf: [ { $ref: '#/components/schemas/PageMeta' }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Notification' } } } } ]
+    TutorEarningsSummary:
+      type: object
+      required: [month, timezone, isEmpty, sessionCount, grossVnd, platformFeeVnd, netVnd, settledNetVnd, unsettledNetVnd, feeRate, adjustmentsVnd, adjustmentCount]
+      properties:
+        month: { type: string, example: '2026-06' }
+        timezone: { type: string, enum: [Asia/Ho_Chi_Minh] }
+        isEmpty: { type: boolean }
+        sessionCount: { type: integer }
+        grossVnd: { type: integer }
+        platformFeeVnd: { type: integer }
+        netVnd: { type: integer, description: grossVnd - platformFeeVnd }
+        settledNetVnd: { type: integer }
+        unsettledNetVnd: { type: integer, description: settledNetVnd + unsettledNetVnd = netVnd }
+        feeRate: { type: [number, 'null'], description: 'Rate shared by all sessions of the month (0.1 = 10%); null when mixed; current config when the month is empty' }
+        adjustmentsVnd: { type: integer, description: 'Negative net of refunds made this month for already settled sessions; not part of the figures above' }
+        adjustmentCount: { type: integer }
+    TutorEarningItem:
+      type: object
+      required: [bookingId, code, studentName, startAt, endAt, priceVnd, platformFeeVnd, netVnd, settled, settledAt]
+      properties:
+        bookingId: { type: string, format: uuid }
+        code: { type: string }
+        studentName: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        priceVnd: { type: integer }
+        platformFeeVnd: { type: integer }
+        netVnd: { type: integer }
+        settled: { type: boolean }
+        settledAt: { type: [string, 'null'], format: date-time }
+    TutorEarningCancelled:
+      type: object
+      required: [bookingId, code, studentName, startAt, endAt, priceVnd, status, refunded, cancelledByRole, tutorCancelReason]
+      properties:
+        bookingId: { type: string, format: uuid }
+        code: { type: string }
+        studentName: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        priceVnd: { type: integer }
+        status: { $ref: '#/components/schemas/BookingStatus' }
+        refunded: { type: boolean }
+        cancelledByRole: { type: [string, 'null'], enum: [STUDENT, TUTOR, ADMIN, null] }
+        tutorCancelReason: { type: [string, 'null'], description: only the tutor's own reason }
+    TutorEarningAdjustment:
+      type: object
+      required: [bookingId, code, studentName, startAt, endAt, refundedAt, amountVnd]
+      properties:
+        bookingId: { type: string, format: uuid }
+        code: { type: string }
+        studentName: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        refundedAt: { type: string, format: date-time }
+        amountVnd: { type: integer, description: negative net amount that had been settled }
+    TutorEarningItems:
+      allOf:
+        - { $ref: '#/components/schemas/PageMeta' }
+        - type: object
+          required: [month, items, cancelled, adjustments]
+          properties:
+            month: { type: string }
+            items: { type: array, items: { $ref: '#/components/schemas/TutorEarningItem' } }
+            cancelled: { type: array, items: { $ref: '#/components/schemas/TutorEarningCancelled' } }
+            adjustments: { type: array, items: { $ref: '#/components/schemas/TutorEarningAdjustment' } }
+    SettlementResult:
+      type: object
+      required: [tutorId, month, settledCount, alreadySettledCount, settledNetVnd]
+      properties:
+        tutorId: { type: string, format: uuid }
+        month: { type: string }
+        settledCount: { type: integer, description: sessions settled by this call }
+        alreadySettledCount: { type: integer }
+        settledNetVnd: { type: integer, description: net of the sessions settled by this call }
     PageMeta:
       type: object
       required: [page, pageSize, total]
