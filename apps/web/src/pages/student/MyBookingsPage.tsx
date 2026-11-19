@@ -97,10 +97,12 @@ export default function MyBookingsPage() {
     <Card>
       <Typography.Title level={3}>{t('myBookings.title')}</Typography.Title>
       <Segmented aria-label={calendarLabels.view} value={view} onChange={setView} options={[{ value: 'list', label: calendarLabels.list }, { value: 'week', label: calendarLabels.week }]} />
-      <Tabs
-        destroyInactiveTabPane
-        items={SCOPES.map((scope) => ({ key: scope, label: t(`myBookings.${scope}`), children: view === 'list' ? <BookingList scope={scope} /> : <BookingCalendar role="student" scope={scope} /> }))}
-      />
+      {view === 'list' ? (
+        <Tabs
+          destroyInactiveTabPane
+          items={SCOPES.map((scope) => ({ key: scope, label: t(`myBookings.${scope}`), children: <BookingList scope={scope} /> }))}
+        />
+      ) : <BookingCalendar role="student" />}
     </Card>
   );
 }

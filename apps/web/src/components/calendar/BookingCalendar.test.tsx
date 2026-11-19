@@ -17,18 +17,31 @@ function renderQuery(element: React.ReactElement) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('booking calendar integration', () => {
-  it.each(['student', 'tutor'] as const)('uses existing %s detail links and API scope', async (role) => {
-    const now = new Date();
-    now.setHours(12, 0, 0, 0);
-    const method = role === 'student' ? 'listMyBookings' : 'listMyTeachingBookings';
-    const spy = vi.spyOn(api, method).mockResolvedValue({ items: [{
-      id: 'calendar-one', startAt: now.toISOString(), endAt: new Date(now.getTime() + 3600000).toISOString(),
-      status: 'CONFIRMED', ...(role === 'student' ? { tutor: { fullName: 'Calendar Tutor' } } : { student: { fullName: 'Calendar Student' } }),
-    }], total: 1 } as never);
-    renderQuery(<BookingCalendar role={role} scope="past" />);
-    const link = await screen.findByRole('link', { name: /Calendar/ });
-    expect(link).toHaveAttribute('href', role === 'student' ? '/lich-cua-toi/calendar-one' : '/gia-su/buoi-day/calendar-one');
-    expect(spy).toHaveBeenCalledWith('past', 1, 100, expect.anything());
+  it.each(['student', 'tutor'] as const)('shows %s sessions of any status in the viewed week, merging every scope', async (role) => {
+    const at = (days: number) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(12, 0, 0, 0); return d; };
+    const mk = (id: string, name: string, d: Date, status: string) => ({
+      id, startAt: d.toISOString(), endAt: new Date(d.getTime() + 3600000).toISOString(), status,
+      ...(role === 'student' ? { tutor: { fullName: name } } : { student: { fullName: name } }),
+    });
+    const byScope: Record<string, unknown[]> = {
+      upcoming: [mk('u1', 'Calendar Upcoming', at(0), 'CONFIRMED')],
+      past: [mk('p1', 'Calendar Past', at(-14), 'CONFIRMED')],
+      cancelled: [mk('c1', 'Calendar Cancelled', at(14), 'CANCELLED_BY_STUDENT')],
+    };
+    const spy = vi.spyOn(api, role === 'student' ? 'listMyBookings' : 'listMyTeachingBookings')
+      .mockImplementation((async (scope: string) => ({ items: byScope[scope], total: byScope[scope].length })) as never);
+    renderQuery(<BookingCalendar role={role} />);
+    const link = await screen.findByRole('link', { name: /Calendar Upcoming/ });
+    expect(link).toHaveAttribute('href', role === 'student' ? '/lich-cua-toi/u1' : '/gia-su/buoi-day/u1');
+    expect(spy.mock.calls.map((c) => c[0]).sort()).toEqual(['cancelled', 'past', 'upcoming']);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Tuần trước' }));
+    await user.click(screen.getByRole('button', { name: 'Tuần trước' }));
+    expect(await screen.findByRole('link', { name: /Calendar Past/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Hôm nay' }));
+    await user.click(screen.getByRole('button', { name: 'Tuần sau' }));
+    await user.click(screen.getByRole('button', { name: 'Tuần sau' }));
+    expect(await screen.findByRole('link', { name: /Calendar Cancelled/ })).toBeInTheDocument();
   });
 
   it.each(['student', 'tutor'] as const)('switches %s from the existing list to the weekly calendar', async (role) => {
@@ -36,6 +49,7 @@ describe('booking calendar integration', () => {
     renderQuery(role === 'student' ? <MyBookingsPage /> : <TutorSessionsPage />);
     expect(screen.queryByRole('region', { name: 'Lịch tuần' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByText('Lịch tuần'));
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
     expect(await screen.findByRole('region', { name: 'Lịch tuần' })).toBeInTheDocument();
     await userEvent.click(screen.getByText('Danh sách'));
     expect(screen.queryByRole('region', { name: 'Lịch tuần' })).not.toBeInTheDocument();
