@@ -12,6 +12,7 @@ import type {
 } from '../api/types';
 import { dayKey } from '../lib/time';
 import { isSlotTaken, resetStudentState, studentHandlers } from './studentHandlers';
+import { earningsHandlers } from './earningsHandlers';
 import { createAdminHandlers, resetAdminState } from './adminHandlers';
 import { reviews, subjects, tutors, users, type MockUser } from './data';
 
@@ -313,6 +314,7 @@ export const handlers = [
   ...tutorHandlers,
   ...studentHandlers({ currentUser, error, slotsFor }),
   ...createAdminHandlers({ currentUser, allUsers }),
+  ...earningsHandlers({ currentUser, error }),
   http.get(`${BASE}/config/public`, () =>
     HttpResponse.json({
       cancellationWindowHours: 24,

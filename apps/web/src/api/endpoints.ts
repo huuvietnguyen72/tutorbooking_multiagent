@@ -31,6 +31,9 @@ import type {
   TeachingScope,
   TutorBooking,
   TutorBookingPage,
+  TutorEarningItems,
+  TutorEarningsSummary,
+  EarningItemsParams,
   TutorOwnProfile,
   TutorProfileInput,
   TutorPublic,
@@ -84,6 +87,10 @@ export const api = {
 
   listMyTeachingBookings: (scope: TeachingScope, page: number, pageSize: number, signal?: AbortSignal) =>
     request<TutorBookingPage>('GET', '/tutor/bookings', { query: { scope, page, pageSize }, signal }),
+  getMyEarnings: (month: string, signal?: AbortSignal) =>
+    request<TutorEarningsSummary>('GET', '/tutor/earnings', { query: { month }, signal }),
+  listMyEarningItems: (params: EarningItemsParams, signal?: AbortSignal) =>
+    request<TutorEarningItems>('GET', '/tutor/earnings/items', { query: { ...params }, signal }),
   getMyTeachingBooking: (bookingId: string, signal?: AbortSignal) =>
     request<TutorBooking>('GET', `/tutor/bookings/${encodeURIComponent(bookingId)}`, { signal }),
   tutorCancelBooking: (bookingId: string, reason: string) =>

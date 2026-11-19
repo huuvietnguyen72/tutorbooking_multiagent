@@ -29,6 +29,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import RegisterPage from './pages/RegisterPage';
 import TutorDetailPage from './pages/TutorDetailPage';
 import TutorListPage from './pages/TutorListPage';
+import TutorEarningsPage from './pages/tutor/TutorEarningsPage';
 import TutorProfilePage from './pages/tutor/TutorProfilePage';
 import TutorReviewsPage from './pages/tutor/TutorReviewsPage';
 import TutorSessionDetailPage from './pages/tutor/TutorSessionDetailPage';
@@ -80,6 +81,7 @@ export const routes: RouteObject[] = [
           { path: ROUTES.tutorSlots, element: <RequireTutorStatus allow={['APPROVED']}><TutorSlotsPage /></RequireTutorStatus> },
           { path: ROUTES.tutorSessions, element: <RequireTutorStatus allow={SESSION_STATES}><TutorSessionsPage /></RequireTutorStatus> },
           { path: '/gia-su/buoi-day/:bookingId', element: <RequireTutorStatus allow={SESSION_STATES}><TutorSessionDetailPage /></RequireTutorStatus> },
+          { path: ROUTES.tutorEarnings, element: <RequireTutorStatus allow={SESSION_STATES}><TutorEarningsPage /></RequireTutorStatus> },
           { path: ROUTES.tutorReviews, element: <RequireTutorStatus allow={SESSION_STATES}><TutorReviewsPage /></RequireTutorStatus> },
         ],
       },
