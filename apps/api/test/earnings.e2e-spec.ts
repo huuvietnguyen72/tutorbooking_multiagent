@@ -356,7 +356,7 @@ describe('tutor earnings (QUA-54)', () => {
       await session('2026-05-10T03:00:00Z', 200_000);
       await session('2026-05-11T03:00:00Z', 150_000, { payment: 'REFUNDED', status: 'CANCELLED_BY_TUTOR', refundedAt: NOW });
       const other = await f.addTutor();
-      await session('2026-05-12T03:00:00Z', 100_000, { tutorId: other.id });
+      await session('2026-05-12T06:00:00Z', 100_000, { tutorId: other.id });
       const res = await settle(admin, tutor.id, '2026-05');
       expect(res.body).toMatchObject({ settledCount: 1, settledNetVnd: 180_000 });
       expect(await t.prisma.payment.count({ where: { settledAt: { not: null } } })).toBe(1);
@@ -396,15 +396,15 @@ describe('tutor earnings (QUA-54)', () => {
   });
 
   describe('admin read (QUA-76)', () => {
-    const list = (query = '', who: User | undefined = admin) => get(t.app, `/admin/earnings${query}`, who?.cookie);
-    const tutorItems = (tutorId: string, query = '', who: User | undefined = admin) =>
+    const list = (query = '', who: User | null = admin) => get(t.app, `/admin/earnings${query}`, who?.cookie);
+    const tutorItems = (tutorId: string, query = '', who: User | null = admin) =>
       get(t.app, `/admin/tutors/${tutorId}/earnings/items${query}`, who?.cookie);
 
     it('401 without a session, 403 for student and tutor', async () => {
-      expect((await list('', undefined)).status).toBe(401);
+      expect((await list('', null)).status).toBe(401);
       expect((await list('?month=2026-05', student)).status).toBe(403);
       expect((await list('?month=2026-05', tutor)).status).toBe(403);
-      expect((await tutorItems(tutor.id, '?month=2026-05', undefined)).status).toBe(401);
+      expect((await tutorItems(tutor.id, '?month=2026-05', null)).status).toBe(401);
       expect((await tutorItems(tutor.id, '?month=2026-05', student)).status).toBe(403);
       expect((await tutorItems(tutor.id, '?month=2026-05', tutor)).status).toBe(403);
     });
@@ -433,7 +433,7 @@ describe('tutor earnings (QUA-54)', () => {
       await session('2026-05-10T03:00:00Z', 200_000);
       await session('2026-05-11T03:00:00Z', 150_000, { settledAt: NOW });
       await session('2026-05-12T03:00:00Z', 333_333);
-      await session('2026-05-12T03:00:00Z', 100_000, { tutorId: other.id });
+      await session('2026-05-12T06:00:00Z', 100_000, { tutorId: other.id });
       await session('2026-05-13T03:00:00Z', 90_000, { payment: 'PENDING', status: 'PENDING_PAYMENT' }); // not counted
       await session('2026-06-01T03:00:00Z', 50_000); // other month
 
@@ -471,7 +471,7 @@ describe('tutor earnings (QUA-54)', () => {
     it('paginates the tutor list', async () => {
       const other = await f.addTutor();
       await session('2026-05-10T03:00:00Z', 100_000);
-      await session('2026-05-10T03:00:00Z', 100_000, { tutorId: other.id });
+      await session('2026-05-10T06:00:00Z', 100_000, { tutorId: other.id });
       const page2 = (await list('?month=2026-05&pageSize=1&page=2')).body;
       expect(page2).toMatchObject({ total: 2, page: 2, pageSize: 1 });
       expect(page2.items).toHaveLength(1);
