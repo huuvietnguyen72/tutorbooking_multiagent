@@ -1,5 +1,7 @@
 import { request } from './client';
 import type {
+  AppNotification,
+  NotificationPage,
   Booking,
   BookingPage,
   CheckoutResponse,
@@ -132,4 +134,12 @@ export const api = {
     request<Payment>('POST', `/admin/payments/${encodeURIComponent(paymentId)}/refund`, { body: { reason } }),
   adminListAuditLogs: (params: AuditLogParams, signal?: AbortSignal) =>
     request<AuditLogPage>('GET', '/admin/audit-logs', { query: { ...params }, signal }),
+
+  listNotifications: (page: number, pageSize: number, signal?: AbortSignal) =>
+    request<NotificationPage>('GET', '/notifications', { query: { page, pageSize }, signal }),
+  countUnreadNotifications: (signal?: AbortSignal) =>
+    request<{ count: number }>('GET', '/notifications/unread-count', { signal }),
+  readNotification: (id: string) =>
+    request<AppNotification>('POST', `/notifications/${encodeURIComponent(id)}/read`),
+  readAllNotifications: () => request<{ updated: number }>('POST', '/notifications/read-all'),
 };

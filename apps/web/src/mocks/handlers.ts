@@ -12,6 +12,7 @@ import type {
 } from '../api/types';
 import { dayKey } from '../lib/time';
 import { isSlotTaken, resetStudentState, studentHandlers } from './studentHandlers';
+import { notificationHandlers, resetNotificationState } from './notificationHandlers';
 import { createAdminHandlers, resetAdminState } from './adminHandlers';
 import { reviews, subjects, tutors, users, type MockUser } from './data';
 
@@ -34,6 +35,7 @@ export function resetMockState(): void {
   tutorStates = new Map();
   resetStudentState();
   resetAdminState();
+  resetNotificationState();
   for (const u of users) {
     if (u.id === 'u-admin') u.mustChangePassword = true;
   }
@@ -312,6 +314,7 @@ const tutorHandlers = [
 export const handlers = [
   ...tutorHandlers,
   ...studentHandlers({ currentUser, error, slotsFor }),
+  ...notificationHandlers({ currentUser, error }),
   ...createAdminHandlers({ currentUser, allUsers }),
   http.get(`${BASE}/config/public`, () =>
     HttpResponse.json({

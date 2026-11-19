@@ -7,6 +7,21 @@
     "loading": "Đang tải...",
     "timezoneNote": "Giờ Việt Nam (GMT+7)"
   },
+  "notifications": {
+    "bell": "Thông báo",
+    "bellUnread": "Thông báo, {{count}} chưa đọc",
+    "title": "Thông báo",
+    "markAllRead": "Đọc tất cả",
+    "unread": "Chưa đọc",
+    "read": "Đã đọc",
+    "view": "Xem chi tiết",
+    "markRead": "Đánh dấu đã đọc",
+    "empty": "Chưa có thông báo nào",
+    "emptyHint": "Thông báo về lịch học và đánh giá sẽ xuất hiện ở đây.",
+    "loadError": "Không tải được thông báo.",
+    "actionError": "Không cập nhật được thông báo. Vui lòng thử lại.",
+    "more": "Hiển thị {{shown}} / {{total}} thông báo mới nhất"
+  },
   "nav": {
     "findTutor": "Tìm gia sư",
     "login": "Đăng nhập",
