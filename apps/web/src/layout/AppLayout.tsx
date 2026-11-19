@@ -6,6 +6,7 @@ import { useLogout, useMe } from '../api/hooks';
 import type { Me } from '../api/types';
 import { ROUTES } from '../auth/routes';
 import { ForcePasswordGate } from '../auth/guards';
+import NotificationBell from '../components/NotificationBell';
 import { initialOf } from '../lib/format';
 
 interface NavItem {
@@ -100,6 +101,7 @@ export default function AppLayout() {
           }))}
           style={{ flex: 1, minWidth: 0 }}
         />
+        {me && !me.mustChangePassword && (me.role === 'STUDENT' || me.role === 'TUTOR') ? <NotificationBell role={me.role} /> : null}
         {me ? (
           <Dropdown menu={userMenu} trigger={['click']}>
             <Button type="text" style={{ color: '#fff' }} aria-label={me.fullName}>

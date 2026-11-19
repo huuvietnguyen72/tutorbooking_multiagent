@@ -361,3 +361,43 @@ export function useGatewayPayment(paymentId: string) {
 
 export const useCompleteGatewayPayment = (paymentId: string) =>
   useMutation({ mutationFn: (result: 'SUCCESS' | 'FAILURE') => api.completeMockGatewayPayment(paymentId, result) });
+
+export const NOTIFICATIONS_KEY = ['notifications'] as const;
+export const NOTIFICATIONS_PAGE_SIZE = 20;
+const UNREAD_POLL_MS = 60_000;
+
+/** Badge counter; polled so new notifications show up without a reload. */
+export function useUnreadCount(enabled = true) {
+  return useQuery({
+    queryKey: [...NOTIFICATIONS_KEY, 'unread-count'],
+    queryFn: ({ signal }) => api.countUnreadNotifications(signal),
+    enabled,
+    refetchInterval: UNREAD_POLL_MS,
+    retry: false,
+  });
+}
+
+export function useNotifications(enabled: boolean) {
+  return useQuery({
+    queryKey: [...NOTIFICATIONS_KEY, 'list'],
+    queryFn: ({ signal }) => api.listNotifications(1, NOTIFICATIONS_PAGE_SIZE, signal),
+    enabled,
+    retry: false,
+  });
+}
+
+/** After any read mutation the list and the unread badge are stale. */
+function useRefetchNotifications() {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+}
+
+export function useMarkNotificationRead() {
+  const refetch = useRefetchNotifications();
+  return useMutation({ mutationFn: api.readNotification, onSettled: refetch });
+}
+
+export function useMarkAllNotificationsRead() {
+  const refetch = useRefetchNotifications();
+  return useMutation({ mutationFn: api.readAllNotifications, onSettled: refetch });
+}

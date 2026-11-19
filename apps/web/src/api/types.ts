@@ -115,3 +115,22 @@ export interface MockGatewayPayment {
   holdExpired?: boolean;
   completable: boolean;
 }
+
+// Notification endpoints are not in the generated schema yet; shapes follow apps/api/src/notifications/notifications.dto.ts.
+export type NotificationType = 'BOOKING_CONFIRMED' | 'BOOKING_CANCELLED' | 'BOOKING_RESCHEDULED' | 'REVIEW_RECEIVED';
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  bookingId: string | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+}
+export interface NotificationPage {
+  items: AppNotification[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
