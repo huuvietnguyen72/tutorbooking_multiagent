@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import { Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/endpoints';
@@ -17,17 +17,24 @@ export async function loadCalendarBookings<T>(load: (page: number) => Promise<{ 
   }
 }
 
-export default function BookingCalendar({ role, scope }: { role: 'student' | 'tutor'; scope: StudentScope }) {
+const SCOPES: StudentScope[] = ['upcoming', 'past', 'cancelled'];
+
+/** The calendar shows the viewed week regardless of status: every scope is loaded and merged by id. */
+export default function BookingCalendar({ role }: { role: 'student' | 'tutor' }) {
   const { t } = useTranslation();
-  const query = useQuery({
-    queryKey: [role === 'student' ? 'student' : 'my', 'bookings', scope, 'calendar'],
-    queryFn: ({ signal }) => loadCalendarBookings<Booking | TutorBooking>((page) => role === 'student'
-      ? api.listMyBookings(scope, page, 100, signal)
-      : api.listMyTeachingBookings(scope, page, 100, signal)),
+  const queries = useQueries({
+    queries: SCOPES.map((scope) => ({
+      queryKey: [role === 'student' ? 'student' : 'my', 'bookings', scope, 'calendar'],
+      queryFn: ({ signal }: { signal: AbortSignal }) => loadCalendarBookings<Booking | TutorBooking>((page) => role === 'student'
+        ? api.listMyBookings(scope, page, 100, signal)
+        : api.listMyTeachingBookings(scope, page, 100, signal)),
+    })),
   });
-  if (query.isPending) return <Spin />;
-  if (query.isError) return <ErrorState message={t(role === 'student' ? 'myBookings.loadError' : 'tutorSessions.loadError')} onRetry={() => void query.refetch()} />;
-  return <WeekCalendar sessions={query.data.map((booking) => ({
+  if (queries.some((q) => q.isError)) return <ErrorState message={t(role === 'student' ? 'myBookings.loadError' : 'tutorSessions.loadError')} onRetry={() => queries.forEach((q) => { if (q.isError) void q.refetch(); })} />;
+  if (queries.some((q) => q.isPending)) return <Spin />;
+  const byId = new Map<string, Booking | TutorBooking>();
+  for (const q of queries) for (const booking of q.data ?? []) byId.set(booking.id, booking);
+  return <WeekCalendar sessions={[...byId.values()].map((booking) => ({
     ...booking,
     title: 'tutor' in booking ? booking.tutor.fullName : booking.student.fullName,
     href: role === 'student' ? ROUTES.booking(booking.id) : ROUTES.tutorSession(booking.id),

@@ -58,10 +58,12 @@ export default function TutorSessionsPage() {
     <Card>
       <Typography.Title level={3}>{t('tutorSessions.title')}</Typography.Title>
       <Segmented aria-label={calendarLabels.view} value={view} onChange={setView} options={[{ value: 'list', label: calendarLabels.list }, { value: 'week', label: calendarLabels.week }]} />
-      <Tabs
-        destroyInactiveTabPane
-        items={SCOPES.map((scope) => ({ key: scope, label: t(`tutorSessions.${scope}`), children: view === 'list' ? <SessionList scope={scope} /> : <BookingCalendar role="tutor" scope={scope} /> }))}
-      />
+      {view === 'list' ? (
+        <Tabs
+          destroyInactiveTabPane
+          items={SCOPES.map((scope) => ({ key: scope, label: t(`tutorSessions.${scope}`), children: <SessionList scope={scope} /> }))}
+        />
+      ) : <BookingCalendar role="tutor" />}
     </Card>
   );
 }
