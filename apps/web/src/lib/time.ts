@@ -117,3 +117,18 @@ export function timeKey(iso: string): string {
 export function formatSession(startIso: string, endIso: string): string {
   return `${formatWeekdayDate(startIso)} ${formatTimeRange(startIso, endIso)}`;
 }
+
+/** Current calendar month in the display timezone, `YYYY-MM`. */
+export function currentMonth(now: Date = new Date()): string {
+  return inVn(now).format('YYYY-MM');
+}
+
+/** `YYYY-MM` shifted by `delta` months (negative = past). */
+export function shiftMonth(month: string, delta: number): string {
+  return dayjs(`${month}-01`, 'YYYY-MM-DD').add(delta, 'month').format('YYYY-MM');
+}
+
+/** `11/2026` */
+export function formatMonth(month: string): string {
+  return `${month.slice(5)}/${month.slice(0, 4)}`;
+}

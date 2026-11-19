@@ -10,10 +10,11 @@ import type {
   TutorSlot,
   TutorSummary,
 } from '../api/types';
-import { dayKey } from '../lib/time';
+import { currentMonth, dayKey, shiftMonth } from '../lib/time';
 import { isSlotTaken, resetStudentState, studentHandlers } from './studentHandlers';
 import { notificationHandlers, resetNotificationState } from './notificationHandlers';
 import { createAdminHandlers, resetAdminState } from './adminHandlers';
+import { monthOf, seedEarnings, summarize, type MockEarnings } from './earningsData';
 import { reviews, subjects, tutors, users, type MockUser } from './data';
 
 /** Handlers follow docs/openapi.yaml (servers: /api/v1). In-memory session state resets via `resetMockState`. */
@@ -28,11 +29,13 @@ interface TutorState {
   bookings: TutorBooking[];
 }
 let tutorStates = new Map<string, TutorState>();
+let earningsStates = new Map<string, MockEarnings>();
 
 export function resetMockState(): void {
   sessionUserId = null;
   registered = [];
   tutorStates = new Map();
+  earningsStates = new Map();
   resetStudentState();
   resetAdminState();
   resetNotificationState();
@@ -127,6 +130,19 @@ function asTutor(): { state: TutorState; user: MockUser } | { response: Response
   if (user.role !== 'TUTOR') return { response: error(403, 'FORBIDDEN') };
   if (!tutorStates.has(user.id)) tutorStates.set(user.id, seedTutor(user));
   return { state: tutorStates.get(user.id) as TutorState, user };
+}
+
+const earningsOf = (userId: string): MockEarnings => {
+  if (!earningsStates.has(userId)) earningsStates.set(userId, seedEarnings());
+  return earningsStates.get(userId) as MockEarnings;
+};
+
+/** Defaults to the current month; future months and months older than 24 are rejected like the API. */
+function earningsMonth(raw: string | null): string | null {
+  const now = currentMonth();
+  const month = raw ?? now;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || month > now || month < shiftMonth(now, -23)) return null;
+  return month;
 }
 
 const withBookingActions = (b: TutorBooking): TutorBooking => {
@@ -270,6 +286,42 @@ const tutorHandlers = [
     const page = Math.max(1, Number(q.get('page') ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(q.get('pageSize') ?? 20)));
     return HttpResponse.json({ page, pageSize, total: list.length, items: list.slice((page - 1) * pageSize, page * pageSize) });
+  }),
+
+  http.get(`${BASE}/tutor/earnings`, ({ request }) => {
+    const r = asTutor();
+    if ('response' in r) return r.response;
+    const month = earningsMonth(new URL(request.url).searchParams.get('month'));
+    if (!month) return error(400, 'VALIDATION_FAILED');
+    return HttpResponse.json(summarize(earningsOf(r.user.id), month));
+  }),
+
+  http.get(`${BASE}/tutor/earnings/items`, ({ request }) => {
+    const r = asTutor();
+    if ('response' in r) return r.response;
+    const q = new URL(request.url).searchParams;
+    const month = earningsMonth(q.get('month'));
+    const settlement = q.get('settlement') ?? 'all';
+    const sort = q.get('sort') ?? 'startAt:desc';
+    if (!month || !['all', 'settled', 'unsettled'].includes(settlement) || !['startAt:desc', 'startAt:asc'].includes(sort)) {
+      return error(400, 'VALIDATION_FAILED');
+    }
+    const data = earningsOf(r.user.id);
+    const sign = sort === 'startAt:asc' ? 1 : -1;
+    const list = data.items
+      .filter((i) => monthOf(i.endAt) === month && (settlement === 'all' || i.settled === (settlement === 'settled')))
+      .sort((a, b) => sign * (a.startAt.localeCompare(b.startAt) || a.bookingId.localeCompare(b.bookingId)));
+    const page = Math.max(1, Number(q.get('page') ?? 1));
+    const pageSize = Math.min(100, Math.max(1, Number(q.get('pageSize') ?? 20)));
+    return HttpResponse.json({
+      month,
+      page,
+      pageSize,
+      total: list.length,
+      items: list.slice((page - 1) * pageSize, page * pageSize),
+      cancelled: data.cancelled.filter((c) => c.month === month),
+      adjustments: data.adjustments.filter((a) => a.month === month),
+    });
   }),
 
   http.get(`${BASE}/tutor/bookings/:bookingId`, ({ params }) => {
