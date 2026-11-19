@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Alert, Button, Card, Form, Typography } from 'antd';
+import { Alert, Button, Card, ConfigProvider, Form, Typography } from 'antd';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
+import './LoginPage.css';
 import { errorText } from '../api/errors';
 import { useLogin } from '../api/hooks';
 import { defaultHome, ROUTES } from '../auth/routes';
@@ -16,6 +17,23 @@ const schema = z.object({
   password: z.string().min(1, 'validation.passwordRequired'),
 });
 type Values = z.infer<typeof schema>;
+
+/** Red accent scoped to the login page only (nested ConfigProvider); the global theme is untouched. */
+const loginTheme = {
+  token: {
+    colorPrimary: '#B91C1C', // red-700, white text 6.5:1
+    colorPrimaryHover: '#991B1B', // red-800
+    colorPrimaryActive: '#7F1D1D', // red-900
+    colorLink: '#B91C1C',
+    colorLinkHover: '#991B1B',
+    colorLinkActive: '#7F1D1D',
+    colorPrimaryBorder: '#FECACA',
+    controlOutline: 'rgba(220, 38, 38, 0.25)', // red-600 focus ring
+  },
+  components: {
+    Button: { primaryShadow: 'none' },
+  },
+};
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -41,8 +59,10 @@ export default function LoginPage() {
   });
 
   return (
-    <Card style={{ maxWidth: 420, margin: '32px auto' }}>
-      <Typography.Title level={3}>{t('auth.loginTitle')}</Typography.Title>
+    <ConfigProvider theme={loginTheme}>
+    <div className="login-red">
+    <Card className="login-red__card" style={{ maxWidth: 420, margin: '0 auto' }}>
+      <Typography.Title level={3} className="login-red__title">{t('auth.loginTitle')}</Typography.Title>
       {next ? <Alert type="info" showIcon message={t('auth.loginRequiredToBook')} style={{ marginBottom: 16 }} /> : null}
       <Form layout="vertical" onFinish={onSubmit} noValidate>
         {error ? <Alert type="error" showIcon role="alert" message={error} style={{ marginBottom: 16 }} /> : null}
@@ -65,5 +85,7 @@ export default function LoginPage() {
         </Link>
       </Typography.Paragraph>
     </Card>
+    </div>
+    </ConfigProvider>
   );
 }
