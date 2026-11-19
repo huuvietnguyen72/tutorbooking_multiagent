@@ -886,6 +886,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/earnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tutors' earnings for a month
+         * @description Read-only. One row per tutor with counted sessions in the month (same rules and per-session fee as `GET /tutor/earnings`, so each row equals what that tutor sees), ordered by name.
+         *     `monthClosed` is true once the month has ended; only then does `PUT .../settlement` accept it. `month` defaults to the current month; invalid, future or older than 24 months is 400.
+         */
+        get: operations["adminListEarnings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/tutors/{tutorId}/earnings/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sessions behind a tutor's monthly earnings
+         * @description Read-only; same body and parameters as `GET /tutor/earnings/items` for that tutor (404 when the user is not a tutor).
+         */
+        get: operations["adminListTutorEarningItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/reviews/{reviewId}": {
         parameters: {
             query?: never;
@@ -1421,6 +1462,25 @@ export interface components {
             items: components["schemas"]["TutorEarningItem"][];
             cancelled: components["schemas"]["TutorEarningCancelled"][];
             adjustments: components["schemas"]["TutorEarningAdjustment"][];
+        };
+        AdminEarningsRow: {
+            /** Format: uuid */
+            tutorId: string;
+            tutorName: string;
+            sessionCount: number;
+            grossVnd: number;
+            platformFeeVnd: number;
+            netVnd: number;
+            settledNetVnd: number;
+            unsettledNetVnd: number;
+            settledCount: number;
+            unsettledCount: number;
+        };
+        AdminEarnings: components["schemas"]["PageMeta"] & {
+            month: string;
+            /** @description the month has ended */
+            monthClosed: boolean;
+            items: components["schemas"]["AdminEarningsRow"][];
         };
         SettlementResult: {
             /** Format: uuid */
@@ -3028,6 +3088,61 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    adminListEarnings: {
+        parameters: {
+            query?: {
+                month?: string;
+                page?: components["parameters"]["Page"];
+                pageSize?: components["parameters"]["PageSize"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEarnings"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+        };
+    };
+    adminListTutorEarningItems: {
+        parameters: {
+            query?: {
+                month?: string;
+                settlement?: "all" | "settled" | "unsettled";
+                page?: components["parameters"]["Page"];
+                pageSize?: components["parameters"]["PageSize"];
+                sort?: "startAt:desc" | "startAt:asc";
+            };
+            header?: never;
+            path: {
+                tutorId: components["parameters"]["TutorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorEarningItems"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            404: components["responses"]["NotFound"];
         };
     };
     adminHideReview: {
