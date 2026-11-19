@@ -29,10 +29,12 @@ function navFor(me: Me | null | undefined): NavItem[] {
         ...(me.tutorApprovalStatus === 'APPROVED' || me.tutorApprovalStatus === 'SUSPENDED'
           ? [
               { key: ROUTES.tutorSessions, labelKey: 'nav.tutorSessions' },
+              { key: ROUTES.tutorEarnings, labelKey: 'nav.tutorEarnings' },
               { key: ROUTES.tutorReviews, labelKey: 'nav.tutorReviews' },
             ]
           : [
               { key: ROUTES.tutorSessions, labelKey: 'nav.tutorSessions', disabledHintKey: 'nav.needApproval' },
+              { key: ROUTES.tutorEarnings, labelKey: 'nav.tutorEarnings', disabledHintKey: 'nav.needApproval' },
               { key: ROUTES.tutorReviews, labelKey: 'nav.tutorReviews', disabledHintKey: 'nav.needApproval' },
             ]),
       ];

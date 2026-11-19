@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   addDaysIso,
+  currentMonth,
   dayKey,
   formatCountdown,
   formatDateTime,
+  formatMonth,
   formatTimeRange,
   formatWeekdayDate,
+  shiftMonth,
   startOfWeekIso,
   toApiDate,
   weekDays,
@@ -52,5 +55,18 @@ describe('lib/time (UTC <-> Asia/Ho_Chi_Minh)', () => {
   it('formats countdowns as mm:ss and clamps at zero', () => {
     expect(formatCountdown(14 * 60_000 + 32_000)).toBe('14:32');
     expect(formatCountdown(-5)).toBe('00:00');
+  });
+});
+
+describe('earnings month helpers', () => {
+  it('takes the month in GMT+7, so the last evening of a month stays in it', () => {
+    expect(currentMonth(new Date('2026-10-31T16:59:00Z'))).toBe('2026-10');
+    expect(currentMonth(new Date('2026-10-31T17:00:00Z'))).toBe('2026-11');
+  });
+
+  it('shifts across year boundaries and formats as MM/YYYY', () => {
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12');
+    expect(shiftMonth('2026-11', -23)).toBe('2024-12');
+    expect(formatMonth('2026-03')).toBe('03/2026');
   });
 });

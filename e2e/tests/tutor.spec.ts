@@ -129,6 +129,20 @@ test.describe('Luồng gia sư', () => {
     await expect(page.getByText(/\(\d+ đánh giá\)/)).toBeVisible();
   });
 
+  test('gia sư mở màn Thu nhập: thấy 5 chỉ số, phí nền tảng lấy từ API và bảng chi tiết tháng', async ({ pageAs, tutor }) => {
+    void tutor;
+    const page = await pageAs('tutor');
+    await page.goto('/gia-su/buoi-day');
+    await page.getByRole('menuitem', { name: 'Thu nhập' }).click();
+    await expect(page.getByRole('heading', { name: 'Thu nhập', level: 3 })).toBeVisible();
+    for (const title of ['Số buổi đã dạy', 'Tổng tiền thu', 'Phí nền tảng', 'Thực nhận', 'Đã đối soát', 'Chưa đối soát']) {
+      await expect(page.locator('.ant-statistic-title', { hasText: title }).first()).toBeVisible();
+    }
+    await expect(page.getByText(/Phí nền tảng là \d+(,\d+)?% giá buổi học\./)).toBeVisible();
+    await expect(page.getByRole('table', { name: 'Các buổi dạy tính vào thu nhập' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Chọn tháng' })).toBeVisible();
+  });
+
   test('E2E-17 gia sư không vào được trang admin', async ({ pageAs, tutor }) => {
     const page = await pageAs('tutor');
     for (const path of ['/admin', '/admin/nguoi-dung', '/admin/booking']) {

@@ -7,6 +7,7 @@ import type {
   AdminTutorParams,
   AdminUserParams,
   AuditLogParams,
+  EarningItemsParams,
   Me,
   RegisterRequest,
   StudentScope,
@@ -189,6 +190,21 @@ export function useTutorCancelBooking(bookingId: string) {
       void qc.invalidateQueries({ queryKey: ['my', 'booking', bookingId] });
       void qc.invalidateQueries({ queryKey: ['my', 'slots'] });
     },
+  });
+}
+
+export function useMyEarnings(month: string) {
+  return useQuery({
+    queryKey: ['my', 'earnings', month],
+    queryFn: ({ signal }) => api.getMyEarnings(month, signal),
+  });
+}
+
+export function useMyEarningItems(params: EarningItemsParams) {
+  return useQuery({
+    queryKey: ['my', 'earnings', 'items', params],
+    queryFn: ({ signal }) => api.listMyEarningItems(params, signal),
+    placeholderData: keepPreviousData,
   });
 }
 
