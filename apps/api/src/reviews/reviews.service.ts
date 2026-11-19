@@ -5,6 +5,7 @@ import { Clock } from '../common/clock';
 import { PrismaService } from '../common/prisma.service';
 import { TX_OPTIONS } from '../bookings/booking-expiry.service';
 import { BookingStateMachine, Tx } from '../bookings/booking-state-machine';
+import { notifyReview } from '../notifications/notification-events';
 import { reviewPolicy } from '../bookings/booking.policy';
 import { PublicReviewDto, ReviewDto, toPublicReview, toReview } from './reviews.dto';
 
@@ -46,6 +47,7 @@ export class ReviewsService {
           include: withStudent,
         });
         await this.recomputeRating(tx, booking.tutorId);
+        await notifyReview(tx, { tutorId: booking.tutorId, bookingId, rating });
         return toReview(row);
       }, TX_OPTIONS);
     } catch (error) {
