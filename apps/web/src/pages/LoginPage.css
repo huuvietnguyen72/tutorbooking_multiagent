@@ -27,11 +27,11 @@
   opacity: 1;
 }
 /* a11y: AA contrast for validation text (#b91c1c on white 6.5:1) */
-.login-red .ant-form-item-explain-error {
+.login-red .ant-form-item .ant-form-item-explain-error {
   color: #b91c1c;
 }
 /* a11y WCAG 1.4.1: links must not rely on colour alone */
-.login-red a {
+.login-red a:not(.ant-btn) {
   text-decoration: underline;
 }
 @media (max-width: 575px) {
