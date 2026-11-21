@@ -300,6 +300,36 @@ export function useAdminAuditLogs(params: AuditLogParams) {
   });
 }
 
+export function useAdminEarnings(month: string, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: ['admin', 'earnings', month, page, pageSize],
+    queryFn: ({ signal }) => api.adminListEarnings(month, page, pageSize, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminTutorEarningItems(tutorId: string | null, month: string, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: ['admin', 'earningItems', tutorId, month, page, pageSize],
+    queryFn: ({ signal }) => api.adminListTutorEarningItems(tutorId!, month, page, pageSize, signal),
+    enabled: tutorId !== null,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Settling is idempotent and one-way: it only moves figures between "unsettled" and "settled" and writes an audit row. */
+export function useAdminSettleMonth() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { tutorId: string; month: string }) => api.adminSettleMonth(v.tutorId, v.month),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'earnings'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'earningItems'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'audit'] });
+    },
+  });
+}
+
 // ---- student flow (T8). Keys start with 'student' so the tutor-side 'my' keys stay untouched. ----
 
 export function useSlot(slotId: string) {

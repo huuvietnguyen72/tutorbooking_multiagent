@@ -6,7 +6,8 @@ import { server } from './mocks/server';
 import { api } from './api/endpoints';
 import { users } from './mocks/data';
 import { renderApp } from './test/render';
-import { todayKey, toUtcIso, addDaysIso } from './lib/time';
+import dayjs from 'dayjs';
+import { todayKey, toUtcIso, addDaysIso, currentMonthKey } from './lib/time';
 
 const mainButton = (name: string) => within(screen.getByRole('main')).getByRole('button', { name });
 
@@ -39,7 +40,7 @@ describe('admin area access', () => {
   it.each(['hocvien@example.test', 'giasu-duyet@example.test'])('returns 403 for %s on every admin page', async (email) => {
     const { router } = await loginAndGo(email, '/admin');
     await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
-    for (const path of ['/admin/gia-su-cho-duyet', '/admin/nguoi-dung', '/admin/booking', '/admin/booking/x', '/admin/nhat-ky']) {
+    for (const path of ['/admin/gia-su-cho-duyet', '/admin/nguoi-dung', '/admin/booking', '/admin/booking/x', '/admin/nhat-ky', '/admin/doi-soat']) {
       await router.navigate(path);
       await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
     }
@@ -208,5 +209,57 @@ describe('bookings (S-27/S-28)', () => {
   it('shows 404 for an unknown booking', async () => {
     await loginAndGo(ADMIN, '/admin/booking/00000000-0000-4000-8000-000000000000');
     expect(await screen.findByText('404')).toBeInTheDocument();
+  });
+});
+
+describe('admin earnings reconciliation', () => {
+  const closedMonth = dayjs(currentMonthKey(), 'YYYY-MM').subtract(1, 'month').format('YYYY-MM');
+
+  it('lists tutors with settled and unsettled net for the chosen month', async () => {
+    await loginAndGo(ADMIN, `/admin/doi-soat?month=${closedMonth}`);
+    expect(await screen.findByText('Gia sư Mock A')).toBeInTheDocument();
+    expect(screen.getByText('Gia sư Mock B')).toBeInTheDocument();
+    expect(screen.getAllByText('540.000 ₫').length).toBeGreaterThan(0);
+  });
+
+  it('shows read-only session details for a tutor', async () => {
+    const { user } = await loginAndGo(ADMIN, `/admin/doi-soat?month=${closedMonth}`);
+    await user.click(await screen.findByRole('button', { name: 'Chi tiết Gia sư Mock A' }));
+    expect(await screen.findAllByText('Chưa đối soát')).not.toHaveLength(0);
+    expect(await screen.findByText(/BK-\d+-11/)).toBeInTheDocument();
+  });
+
+  it('confirms before settling, shows the result, and a second settle has nothing left', async () => {
+    const { user } = await loginAndGo(ADMIN, `/admin/doi-soat?month=${closedMonth}`);
+    await user.click(await screen.findByRole('button', { name: 'Đối soát tháng Gia sư Mock A' }));
+    expect(await screen.findByText(/Đánh dấu 3 buổi, tổng thực nhận 540\.000 ₫/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Xác nhận đối soát' }));
+    expect(await screen.findAllByText('Đã đối soát 3 buổi, tổng 540.000 ₫.')).not.toHaveLength(0);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Đối soát tháng Gia sư Mock A' })).toBeDisabled());
+  });
+
+  it('blocks settling the current month', async () => {
+    await loginAndGo(ADMIN, `/admin/doi-soat?month=${currentMonthKey()}`);
+    await screen.findByText('Gia sư Mock A');
+    expect(screen.getByRole('button', { name: 'Đối soát tháng Gia sư Mock A' })).toBeDisabled();
+  });
+
+  it('surfaces an API error when settling fails', async () => {
+    server.use(
+      http.put('/api/v1/admin/tutors/:tutorId/earnings/:month/settlement', () =>
+        HttpResponse.json({ error: { code: 'INTERNAL_ERROR', message: 'boom' } }, { status: 500 }),
+      ),
+    );
+    const { user } = await loginAndGo(ADMIN, `/admin/doi-soat?month=${closedMonth}`);
+    await user.click(await screen.findByRole('button', { name: 'Đối soát tháng Gia sư Mock A' }));
+    await user.click(await screen.findByRole('button', { name: 'Xác nhận đối soát' }));
+    await waitFor(() => expect(screen.queryByText(/Đã đối soát 3 buổi/)).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Đối soát tháng Gia sư Mock A' })).toBeEnabled();
+  });
+
+  it('shows an error state with retry when the list fails to load', async () => {
+    server.use(http.get('/api/v1/admin/earnings', () => HttpResponse.json({ error: { code: 'INTERNAL_ERROR', message: 'x' } }, { status: 500 })));
+    await loginAndGo(ADMIN, `/admin/doi-soat?month=${closedMonth}`);
+    expect(await screen.findByText('Không tải được số liệu thu nhập.')).toBeInTheDocument();
   });
 });

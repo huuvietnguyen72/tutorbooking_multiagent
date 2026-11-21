@@ -44,6 +44,7 @@ function navFor(me: Me | null | undefined): NavItem[] {
         { key: ROUTES.adminTutors, labelKey: 'nav.adminTutors' },
         { key: ROUTES.adminUsers, labelKey: 'nav.adminUsers' },
         { key: ROUTES.adminBookings, labelKey: 'nav.adminBookings' },
+        { key: ROUTES.adminEarnings, labelKey: 'nav.adminEarnings' },
       ];
     default:
       return [
