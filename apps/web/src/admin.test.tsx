@@ -253,7 +253,7 @@ describe('admin earnings reconciliation', () => {
     const { user } = await loginAndGo(ADMIN, `/admin/doi-soat?month=${closedMonth}`);
     await user.click(await screen.findByRole('button', { name: 'Đối soát tháng Gia sư Mock A' }));
     await user.click(await screen.findByRole('button', { name: 'Xác nhận đối soát' }));
-    await waitFor(() => expect(screen.queryByText(/Đã đối soát 3 buổi/)).not.toBeInTheDocument());
+    expect(await screen.findAllByText('Hệ thống đang gặp sự cố. Vui lòng thử lại sau.')).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Đối soát tháng Gia sư Mock A' })).toBeEnabled();
   });
 
