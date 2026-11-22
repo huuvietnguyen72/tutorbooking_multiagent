@@ -23,6 +23,7 @@ export const ROUTES = {
   tutorSlots: '/gia-su/lich-trong',
   tutorSessions: '/gia-su/buoi-day',
   tutorSession: (bookingId: string) => `/gia-su/buoi-day/${bookingId}`,
+  tutorEarnings: '/gia-su/thu-nhap',
   tutorReviews: '/gia-su/danh-gia',
   admin: '/admin',
   adminTutors: '/admin/gia-su-cho-duyet',
