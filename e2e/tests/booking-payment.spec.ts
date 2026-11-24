@@ -17,7 +17,7 @@ test.describe('Đặt lịch và thanh toán', () => {
       .click();
     const slotButton = page.getByRole('button', { name: new RegExp(vnRange(slot.startAt, slot.endAt)) });
     for (let week = 0; week < 3 && !(await slotButton.isVisible()); week++) {
-      await page.getByRole('button', { name: 'Tuần sau' }).click();
+      await page.getByRole('button', { name: 'Tuần sau', exact: true }).click();
       await page.waitForTimeout(300); // week switch refetches the grid; nothing else to await on
     }
     await slotButton.click();
