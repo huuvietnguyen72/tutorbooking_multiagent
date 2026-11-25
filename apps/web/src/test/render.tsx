@@ -19,7 +19,7 @@ export function renderApp(path: string) {
     <StyleProvider mock="server">
       <AntApp>
         <QueryClientProvider client={client}>
-          <RouterProvider router={router} />
+          <RouterProvider router={router} useTransitions={false} />
         </QueryClientProvider>
       </AntApp>
     </StyleProvider>,

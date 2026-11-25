@@ -16,9 +16,18 @@ test.describe('Đặt lịch và thanh toán', () => {
       .getByRole('link', { name: 'Xem hồ sơ' })
       .click();
     const slotButton = page.getByRole('button', { name: new RegExp(vnRange(slot.startAt, slot.endAt)) });
-    for (let week = 0; week < 3 && !(await slotButton.isVisible()); week++) {
-      await page.getByRole('button', { name: 'Tuần sau', exact: true }).click();
-      await page.waitForTimeout(300); // week switch refetches the grid; nothing else to await on
+    const nextWeek = page.getByRole('button', { name: 'Tuần sau', exact: true });
+    await expect(nextWeek).toBeVisible();
+    // react-router 7 renders the initial route in a transition; wait for each week's
+    // slots before deciding whether to advance, or the first check can run before the
+    // grid has loaded and skip past the week that holds the slot.
+    for (let week = 0; week < 3; week++) {
+      await expect(page.locator('section .ant-skeleton')).toHaveCount(0);
+      if (await slotButton.isVisible()) break;
+      await Promise.all([
+        page.waitForResponse((response) => response.url().includes('/slots?') && response.request().method() === 'GET' && response.ok()),
+        nextWeek.click(),
+      ]);
     }
     await slotButton.click();
 
