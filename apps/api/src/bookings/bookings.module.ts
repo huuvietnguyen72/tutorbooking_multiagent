@@ -48,6 +48,6 @@ export class BookingsModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     consumer
       .apply(MockGatewayEnabledMiddleware)
-      .forRoutes({ path: 'mock-gateway/*', method: RequestMethod.ALL });
+      .forRoutes({ path: 'mock-gateway/{*path}', method: RequestMethod.ALL });
   }
 }
