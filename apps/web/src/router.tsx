@@ -23,6 +23,7 @@ import ReschedulePage from './pages/student/ReschedulePage';
 import AdminAuditPage from './pages/admin/AdminAuditPage';
 import AdminBookingDetailPage from './pages/admin/AdminBookingDetailPage';
 import AdminBookingsPage from './pages/admin/AdminBookingsPage';
+import AdminEarningsPage from './pages/admin/AdminEarningsPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminTutorsPage from './pages/admin/AdminTutorsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -93,6 +94,7 @@ export const routes: RouteObject[] = [
           { path: ROUTES.adminUsers, element: <AdminUsersPage /> },
           { path: ROUTES.adminBookings, element: <AdminBookingsPage /> },
           { path: '/admin/booking/:bookingId', element: <AdminBookingDetailPage /> },
+          { path: ROUTES.adminEarnings, element: <AdminEarningsPage /> },
           { path: ROUTES.adminAudit, element: <AdminAuditPage /> },
         ],
       },

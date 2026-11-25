@@ -11,6 +11,9 @@ import type {
   StudentScope,
   AdminBookingDetail,
   AdminBookingParams,
+  AdminEarnings,
+  AdminEarningItems,
+  SettlementResult,
   AdminStats,
   AdminTutor,
   AdminTutorPage,
@@ -141,6 +144,16 @@ export const api = {
     request<Payment>('POST', `/admin/payments/${encodeURIComponent(paymentId)}/refund`, { body: { reason } }),
   adminListAuditLogs: (params: AuditLogParams, signal?: AbortSignal) =>
     request<AuditLogPage>('GET', '/admin/audit-logs', { query: { ...params }, signal }),
+
+  adminListEarnings: (month: string, page: number, pageSize: number, signal?: AbortSignal) =>
+    request<AdminEarnings>('GET', '/admin/earnings', { query: { month, page, pageSize }, signal }),
+  adminListTutorEarningItems: (tutorId: string, month: string, page: number, pageSize: number, signal?: AbortSignal) =>
+    request<AdminEarningItems>('GET', `/admin/tutors/${encodeURIComponent(tutorId)}/earnings/items`, {
+      query: { month, page, pageSize, sort: 'startAt:asc' },
+      signal,
+    }),
+  adminSettleMonth: (tutorId: string, month: string) =>
+    request<SettlementResult>('PUT', `/admin/tutors/${encodeURIComponent(tutorId)}/earnings/${encodeURIComponent(month)}/settlement`, { body: {} }),
 
   listNotifications: (page: number, pageSize: number, signal?: AbortSignal) =>
     request<NotificationPage>('GET', '/notifications', { query: { page, pageSize }, signal }),

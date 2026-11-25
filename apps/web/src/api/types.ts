@@ -44,6 +44,11 @@ export type TutorAction = 'approve' | 'reject' | 'suspend' | 'reinstate';
 export type RegisterRequest = S['RegisterRequest'];
 export type LoginRequest = S['LoginRequest'];
 export type ErrorCode = S['ErrorCode'];
+export type AdminEarnings = S['AdminEarnings'];
+export type AdminEarningsRow = S['AdminEarningsRow'];
+export type AdminEarningItems = S['TutorEarningItems'];
+export type AdminEarningItem = S['TutorEarningItem'];
+export type SettlementResult = S['SettlementResult'];
 export type TutorSort = 'rating_desc' | 'price_asc' | 'price_desc';
 
 export interface PublicConfig {

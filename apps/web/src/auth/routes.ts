@@ -31,6 +31,7 @@ export const ROUTES = {
   adminBookings: '/admin/booking',
   adminBooking: (id: string) => `/admin/booking/${id}`,
   adminAudit: '/admin/nhat-ky',
+  adminEarnings: '/admin/doi-soat',
 } as const;
 
 /** Where a user lands right after login (design §2.5). */

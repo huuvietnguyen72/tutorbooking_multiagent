@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw';
 import type {
   AdminBookingDetail,
+  AdminEarningItem,
+  AdminEarningsRow,
   AdminTutor,
   AdminUser,
   AuditLog,
@@ -10,6 +12,7 @@ import type {
   TutorAction,
   TutorApprovalStatus,
 } from '../api/types';
+import { currentMonthKey } from '../lib/time';
 import { subjects, type MockUser } from './data';
 
 /** Admin API mock (docs/openapi.yaml §admin). Mirrors the API's guards: 401 → 403 for non-admins → 404 for unknown ids. */
@@ -101,9 +104,54 @@ function seed(allUsers: MockUser[]): State {
 
 let state: State | null = null;
 
+/** Earnings mock: every month has 2 tutors x 3 sessions of 200.000 ₫ (fee 10%); settled sessions are tracked per tutor and month. */
+const EARNING_TUTORS = [
+  { id: uuid(6, 1), name: 'Gia sư Mock A' },
+  { id: uuid(6, 2), name: 'Gia sư Mock B' },
+];
+let settledSessions = new Map<string, Set<string>>();
+
 export function resetAdminState(): void {
   state = null;
+  settledSessions = new Map();
 }
+
+const earningItems = (tutorId: string, month: string): AdminEarningItem[] => {
+  const settled = settledSessions.get(`${tutorId}|${month}`);
+  return [1, 2, 3].map((n) => {
+    const code = `BK-${month.replace('-', '')}-${tutorId.slice(-1)}${n}`;
+    const startAt = new Date(`${month}-0${n}T03:00:00.000Z`).toISOString();
+    return {
+      bookingId: uuid(7, Number(tutorId.slice(-1)) * 10 + n),
+      code,
+      studentName: 'Học viên Mock',
+      startAt,
+      endAt: new Date(Date.parse(startAt) + HOUR).toISOString(),
+      priceVnd: 200_000,
+      platformFeeVnd: 20_000,
+      netVnd: 180_000,
+      settled: settled?.has(code) ?? false,
+      settledAt: settled?.has(code) ? new Date().toISOString() : null,
+    };
+  });
+};
+
+const earningsRow = (tutor: { id: string; name: string }, month: string): AdminEarningsRow => {
+  const items = earningItems(tutor.id, month);
+  const settled = items.filter((i) => i.settled);
+  return {
+    tutorId: tutor.id,
+    tutorName: tutor.name,
+    sessionCount: items.length,
+    grossVnd: items.length * 200_000,
+    platformFeeVnd: items.length * 20_000,
+    netVnd: items.length * 180_000,
+    settledNetVnd: settled.length * 180_000,
+    unsettledNetVnd: (items.length - settled.length) * 180_000,
+    settledCount: settled.length,
+    unsettledCount: items.length - settled.length,
+  };
+};
 
 const page = <T,>(items: T[], q: URLSearchParams) => {
   const p = Math.max(1, Number(q.get('page') ?? 1));
@@ -256,6 +304,38 @@ export function createAdminHandlers(ctx: Ctx) {
       b.payment = { ...b.payment, status: 'REFUNDED', refundFailed: false, refundedAt: new Date().toISOString(), refundedByName: g.admin.fullName };
       log(g.s, g.admin, 'PAYMENT_REFUNDED', 'payment', b.payment.id, body.reason);
       return HttpResponse.json(b.payment);
+    }),
+
+    http.get(`${BASE}/earnings`, ({ request }) => {
+      const g = guard();
+      if ('response' in g) return g.response;
+      const q = new URL(request.url).searchParams;
+      const month = q.get('month') ?? currentMonthKey();
+      return HttpResponse.json({ month, monthClosed: month < currentMonthKey(), ...page(EARNING_TUTORS.map((t) => earningsRow(t, month)), q) });
+    }),
+
+    http.get(`${BASE}/tutors/:tutorId/earnings/items`, ({ params, request }) => {
+      const g = guard();
+      if ('response' in g) return g.response;
+      const q = new URL(request.url).searchParams;
+      if (!EARNING_TUTORS.some((t) => t.id === params.tutorId)) return error(404, 'NOT_FOUND');
+      return HttpResponse.json({ month: q.get('month'), ...page(earningItems(String(params.tutorId), q.get('month') ?? currentMonthKey()), q) });
+    }),
+
+    http.put(`${BASE}/tutors/:tutorId/earnings/:month/settlement`, ({ params }) => {
+      const g = guard();
+      if ('response' in g) return g.response;
+      const tutorId = String(params.tutorId);
+      const month = String(params.month);
+      if (!EARNING_TUTORS.some((t) => t.id === tutorId)) return error(404, 'NOT_FOUND');
+      if (month >= currentMonthKey()) return error(409, 'INVALID_STATE');
+      const items = earningItems(tutorId, month);
+      const fresh = items.filter((i) => !i.settled);
+      const set = settledSessions.get(`${tutorId}|${month}`) ?? new Set<string>();
+      fresh.forEach((i) => set.add(i.code));
+      settledSessions.set(`${tutorId}|${month}`, set);
+      if (fresh.length > 0) log(g.s, g.admin, 'EARNINGS_SETTLED', 'tutor', tutorId, month);
+      return HttpResponse.json({ tutorId, month, settledCount: fresh.length, alreadySettledCount: items.length - fresh.length, settledNetVnd: fresh.length * 180_000 });
     }),
 
     http.get(`${BASE}/audit-logs`, ({ request }) => {

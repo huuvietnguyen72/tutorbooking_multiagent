@@ -132,3 +132,14 @@ export function shiftMonth(month: string, delta: number): string {
 export function formatMonth(month: string): string {
   return `${month.slice(5)}/${month.slice(0, 4)}`;
 }
+
+/** Current calendar month (display timezone) as the API `YYYY-MM`. */
+export function currentMonthKey(): string {
+  return inVn(new Date()).format('YYYY-MM');
+}
+
+/** Month picker bounds: the API rejects future months and months older than 24. */
+export function monthPickerRange(): { min: Dayjs; max: Dayjs } {
+  const now = dayjs(currentMonthKey(), 'YYYY-MM');
+  return { min: now.subtract(24, 'month'), max: now };
+}
