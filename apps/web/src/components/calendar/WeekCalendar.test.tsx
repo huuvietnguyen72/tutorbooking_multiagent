@@ -12,9 +12,9 @@ const session: CalendarSession = {
   startAt: new Date(2026, 10, 16, 9, 30).toISOString(),
   endAt: new Date(2026, 10, 16, 10, 30).toISOString(), href: '/detail/one',
 };
-function setup(sessions = [session]) {
+function setup(sessions = [session], role: 'student' | 'tutor' = 'student') {
   return render(<MemoryRouter><Routes>
-    <Route path="/" element={<WeekCalendar initialDate={date} sessions={sessions} />} />
+    <Route path="/" element={<WeekCalendar initialDate={date} sessions={sessions} role={role} />} />
     <Route path="/detail/one" element={<p>Booking detail</p>} />
   </Routes></MemoryRouter>);
 }
@@ -42,6 +42,18 @@ describe('weekly booking calendar', () => {
     const today = monday(new Date());
     const label = new Intl.DateTimeFormat('vi', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(today);
     expect(screen.getByText(new RegExp(label))).toBeInTheDocument();
+  });
+
+  it('labels cancellations from the viewer perspective', () => {
+    const cancelledByTutor = { ...session, id: 'by-tutor', status: 'CANCELLED_BY_TUTOR' as const };
+    const cancelledByStudent = { ...session, id: 'by-student', status: 'CANCELLED_BY_STUDENT' as const };
+    const { unmount } = setup([cancelledByTutor, cancelledByStudent], 'student');
+    expect(screen.getByText('Đã huỷ bởi gia sư')).toBeInTheDocument();
+    expect(screen.getByText('Đã huỷ bởi bạn')).toBeInTheDocument();
+    unmount();
+    setup([cancelledByTutor, cancelledByStudent], 'tutor');
+    expect(screen.getByText('Bạn đã huỷ')).toBeInTheDocument();
+    expect(screen.getByText('Học viên đã huỷ')).toBeInTheDocument();
   });
 
   it('groups UTC timestamps by local date, including sessions spanning midnight', () => {
