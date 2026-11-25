@@ -1,9 +1,10 @@
 import { Spin } from 'antd';
 import type { ReactNode } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router';
+import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router';
 import { useMe } from '../api/hooks';
 import type { TutorApprovalStatus, UserRole } from '../api/types';
-import { defaultHome, ROUTES } from './routes';
+import { postAuthHome, ROUTES } from './routes';
+import { safeNext } from '../lib/safeNext';
 import { ErrorState } from '../components/States';
 
 function FullSpin() {
@@ -29,12 +30,19 @@ export function RequireAuth({ roles, children }: { roles?: UserRole[]; children?
   return children ?? <Outlet />;
 }
 
-/** Login / register are for guests only; a logged-in user goes to their home. */
+/**
+ * Login / register are for guests only. A signed-in user leaves via `?next=` when it is a safe
+ * same-origin path (so booking resumes at the chosen slot), otherwise via their role's home.
+ */
 export function GuestOnly({ children }: { children: ReactNode }) {
   const { data: me, isPending } = useMe();
+  const location = useLocation();
+  const [params] = useSearchParams();
   if (isPending) return <FullSpin />;
-  if (me && !me.mustChangePassword) return <Navigate to={defaultHome(me)} replace />;
-  if (me?.mustChangePassword) return <Navigate to={ROUTES.forcePassword} replace />;
+  if (me) {
+    const via = location.pathname === ROUTES.register ? 'register' : 'login';
+    return <Navigate to={postAuthHome(me, safeNext(params.get('next')), via)} replace />;
+  }
   return children;
 }
 

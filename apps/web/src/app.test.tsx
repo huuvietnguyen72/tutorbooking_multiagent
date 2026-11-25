@@ -75,6 +75,16 @@ describe('login', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/gia-su'));
   });
 
+  it('resumes the chosen slot after logging in from "Đặt lịch"', async () => {
+    const tutorId = '00000000-0000-4000-8000-000000000001';
+    const slotId = '30000000-0000-4000-8000-0000000000aa';
+    const next = `/gia-su/${tutorId}?slot=${slotId}`;
+    const user = userEvent.setup();
+    const { router } = renderApp(`/dang-nhap?next=${encodeURIComponent(next)}`);
+    await login(user, 'hocvien@example.test');
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/dat-lich/${slotId}`));
+  });
+
   it('forces a password change before anything else', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/dang-nhap');
@@ -127,6 +137,19 @@ describe('register', () => {
     await user.type(screen.getByLabelText('Mật khẩu'), 'mat-khau-12345');
     await user.click(mainButton('Đăng ký'));
     await waitFor(() => expect(router.state.location.pathname).toBe('/gia-su/trang-thai'));
+  });
+
+  it('resumes the chosen slot after registering from "Đặt lịch"', async () => {
+    const tutorId = '00000000-0000-4000-8000-000000000001';
+    const slotId = '30000000-0000-4000-8000-0000000000bb';
+    const next = `/gia-su/${tutorId}?slot=${slotId}`;
+    const user = userEvent.setup();
+    const { router } = renderApp(`/dang-ky?next=${encodeURIComponent(next)}`);
+    await user.type(await screen.findByLabelText('Họ và tên'), 'Lê Văn C');
+    await user.type(screen.getByLabelText('Email'), 'dat-lich@example.test');
+    await user.type(screen.getByLabelText('Mật khẩu'), 'mat-khau-12345');
+    await user.click(mainButton('Đăng ký'));
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/dat-lich/${slotId}`));
   });
 });
 
