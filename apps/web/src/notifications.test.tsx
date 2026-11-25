@@ -13,6 +13,8 @@ async function loginAs(email: string, userId: string) {
   await user.type(screen.getByLabelText('Mật khẩu'), 'mock-pass-1234');
   await user.click(mainButton('Đăng nhập'));
   await waitFor(() => expect(router.state.location.pathname).not.toBe('/dang-nhap'));
+  // Wait for the post-login render to commit so later navigations are not batched with it.
+  await waitFor(() => expect(screen.queryByLabelText('Mật khẩu')).not.toBeInTheDocument());
   return { user, router, userId };
 }
 
