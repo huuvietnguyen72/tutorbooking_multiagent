@@ -278,7 +278,7 @@ Ghi chú phạm vi: E2E-01..05 + 06..08 + 10 là nòng cốt theo yêu cầu T10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20.18.1', cache: npm }
+        with: { node-version: '20.19.5', cache: npm }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Prepare .env (CI-only secrets)

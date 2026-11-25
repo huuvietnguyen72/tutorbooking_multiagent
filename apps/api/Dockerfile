@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20.18.1-alpine AS build
+FROM node:20.19.5-alpine AS build
 WORKDIR /app
 ENV NODE_ENV=development
 COPY package.json package-lock.json ./
@@ -11,7 +11,7 @@ RUN npm ci
 COPY apps/api ./apps/api
 RUN npm run build --workspace @tutor/api
 
-FROM node:20.18.1-alpine AS runtime
+FROM node:20.19.5-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     TZ=UTC \

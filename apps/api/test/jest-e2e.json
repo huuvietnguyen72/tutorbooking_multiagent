@@ -8,7 +8,8 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": [
+    "node_modules/@nestjs/.+\\.js$": "<rootDir>/test/esm-deps-transform.js",
+    "^(?!.*node_modules).+\\.(t|j)s$": [
       "ts-jest",
       {
         "tsconfig": "<rootDir>/tsconfig.json"
@@ -18,5 +19,8 @@
   "setupFiles": [
     "<rootDir>/test/setup-env.ts"
   ],
-  "testTimeout": 30000
+  "testTimeout": 30000,
+  "transformIgnorePatterns": [
+    "/node_modules/(?!@nestjs/)"
+  ]
 }
