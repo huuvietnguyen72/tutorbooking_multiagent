@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
+import { addDaysIso, startOfWeekIso } from './lib/time';
 import { server } from './mocks/server';
 import { renderApp } from './test/render';
 
@@ -178,10 +179,12 @@ describe('tutor profile', () => {
   });
 
   it('sends a guest to login with the slot to come back to', async () => {
+    // Wednesday 10:00 of the *current* display week: the page opens on this week, so a "now + N days" slot can fall into next week.
+    const slotStart = new Date(new Date(addDaysIso(startOfWeekIso(), 2)).getTime() + 10 * 3_600_000).toISOString();
     server.use(
       http.get(`/api/v1/tutors/${id}/slots`, () =>
         HttpResponse.json([
-          { id: '30000000-0000-4000-8000-000000000001', startAt: new Date(Date.now() + 3 * 86_400_000).toISOString(), endAt: new Date(Date.now() + 3 * 86_400_000 + 3_600_000).toISOString(), status: 'AVAILABLE' },
+          { id: '30000000-0000-4000-8000-000000000001', startAt: slotStart, endAt: new Date(new Date(slotStart).getTime() + 3_600_000).toISOString(), status: 'AVAILABLE' },
         ]),
       ),
     );
