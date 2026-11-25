@@ -2,7 +2,7 @@ import { Alert, Button, Card, DatePicker, Drawer, Modal, Space, Table, Tag, Tool
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { errorText } from '../../api/errors';
 import { useAdminEarnings, useAdminSettleMonth, useAdminTutorEarningItems } from '../../api/hooks';
 import type { AdminEarningItem, AdminEarningsRow, SettlementResult } from '../../api/types';

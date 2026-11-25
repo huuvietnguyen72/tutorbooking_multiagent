@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useResumeCheckout } from '../../api/hooks';
 import { ROUTES } from '../../auth/routes';
 import { safeNext } from '../../lib/safeNext';

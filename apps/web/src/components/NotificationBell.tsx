@@ -2,7 +2,7 @@ import { BellOutlined } from '@ant-design/icons';
 import { App, Badge, Button, List, Popover, Skeleton, Typography } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import {
   NOTIFICATIONS_PAGE_SIZE,
   useMarkAllNotificationsRead,

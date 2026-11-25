@@ -6,6 +6,7 @@ import { server } from './mocks/server';
 import { api } from './api/endpoints';
 import { users } from './mocks/data';
 import { renderApp } from './test/render';
+import { expectForbidden } from './test/navigation';
 import dayjs from 'dayjs';
 import { todayKey, toUtcIso, addDaysIso, currentMonthKey } from './lib/time';
 
@@ -19,6 +20,9 @@ async function loginAndGo(email: string, path: string) {
   await user.type(screen.getByLabelText('Mật khẩu'), 'mock-pass-1234');
   await user.click(mainButton('Đăng nhập'));
   await waitFor(() => expect(router.state.location.pathname).not.toBe('/dang-nhap'));
+  // Wait for the post-login render to commit before navigating again; otherwise the two
+  // navigations can batch and the guard's redirect is skipped.
+  await waitFor(() => expect(screen.queryByLabelText('Mật khẩu')).not.toBeInTheDocument());
   await router.navigate(path);
   return { user, router };
 }
@@ -39,10 +43,10 @@ describe('admin area access', () => {
 
   it.each(['hocvien@example.test', 'giasu-duyet@example.test'])('returns 403 for %s on every admin page', async (email) => {
     const { router } = await loginAndGo(email, '/admin');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+    await expectForbidden(router);
     for (const path of ['/admin/gia-su-cho-duyet', '/admin/nguoi-dung', '/admin/booking', '/admin/booking/x', '/admin/nhat-ky', '/admin/doi-soat']) {
       await router.navigate(path);
-      await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+      await expectForbidden(router);
     }
   });
 });

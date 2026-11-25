@@ -1,4 +1,4 @@
-import { RouterProvider } from 'react-router-dom';
+import { RouterProvider } from 'react-router';
 import { useMemo } from 'react';
 import AppProviders from './AppProviders';
 import { createQueryClient } from './api/queryClient';

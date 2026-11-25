@@ -1,7 +1,7 @@
 import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { Alert, Button, Skeleton, Space, Spin, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../../api/client';
 import { errorText } from '../../api/errors';
 import { useCompleteGatewayPayment, useGatewayPayment } from '../../api/hooks';

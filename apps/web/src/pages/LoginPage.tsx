@@ -3,7 +3,7 @@ import { Alert, Button, Card, ConfigProvider, Form, Typography } from 'antd';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import './LoginPage.css';
 import { errorText } from '../api/errors';

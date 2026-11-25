@@ -3,7 +3,7 @@ import { Alert, Button, Card, Form, Radio, Typography } from 'antd';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { ApiError } from '../api/client';
 import { errorText, fieldErrorText } from '../api/errors';

@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Descriptions, Radio, Skeleton, Space, Table, Typography, message } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { ApiError } from '../../api/client';
 import { errorText } from '../../api/errors';
 import { useAdminBooking, useAdminCancelBooking, useAdminRefundPayment } from '../../api/hooks';

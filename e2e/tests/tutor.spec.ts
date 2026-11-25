@@ -98,8 +98,11 @@ test.describe('Luồng gia sư', () => {
     await row.first().getByRole('button', { name: 'Chi tiết' }).click();
 
     await expect(page).toHaveURL(new RegExp(`/gia-su/buoi-day/${bookingId}$`));
-    await expect(page.getByText('Lê Học Viên')).toBeVisible();
-    await expect(page.getByText(booking.code)).toBeVisible();
+    // react-router 7 commits the new route in a transition: the list is still in
+    // the DOM right after the URL changes, and its rows also contain this name.
+    const detailCard = page.locator('.ant-card', { hasText: booking.code });
+    await expect(detailCard.getByText('Lê Học Viên', { exact: true })).toBeVisible();
+    await expect(detailCard.getByText(booking.code)).toBeVisible();
     await expect(page.getByText(range).first()).toBeVisible();
     await expect(page.getByText(vnd(ACCOUNTS.tutor.priceVnd)).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Huỷ buổi dạy' })).toBeEnabled();

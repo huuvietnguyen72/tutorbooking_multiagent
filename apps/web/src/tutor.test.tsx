@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from './test/render';
+import { expectForbidden } from './test/navigation';
 import { addDaysIso, dayKey, startOfWeekIso } from './lib/time';
 
 const APPROVED = 'giasu-duyet@example.test';
@@ -19,6 +20,9 @@ async function loginAndGo(email: string, path: string, options: Parameters<typeo
   await user.type(screen.getByLabelText('Mật khẩu'), 'mock-pass-1234');
   await user.click(mainButton('Đăng nhập'));
   await waitFor(() => expect(router.state.location.pathname).not.toBe('/dang-nhap'));
+  // Wait for the post-login render to commit before navigating again; otherwise the two
+  // navigations can batch and the guard's redirect is skipped.
+  await waitFor(() => expect(screen.queryByLabelText('Mật khẩu')).not.toBeInTheDocument());
   await router.navigate(path);
   return { user, router };
 }
@@ -32,9 +36,9 @@ describe('tutor area access', () => {
 
   it('returns 403 for a student on every tutor page', async () => {
     const { router } = await loginAndGo('hocvien@example.test', '/gia-su/buoi-day');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+    await expectForbidden(router);
     await router.navigate('/gia-su/ho-so-cua-toi');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+    await expectForbidden(router);
   });
 
   it('keeps pending tutors off slots and sessions but lets them edit the profile', async () => {

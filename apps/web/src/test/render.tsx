@@ -2,7 +2,7 @@ import { StyleProvider } from '@ant-design/cssinjs';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import { App as AntApp } from 'antd';
-import { RouterProvider } from 'react-router-dom';
+import { RouterProvider } from 'react-router';
 import '../i18n';
 import { createQueryClient } from '../api/queryClient';
 import { createTestRouter } from '../router';
@@ -19,7 +19,7 @@ export function renderApp(path: string) {
     <StyleProvider mock="server">
       <AntApp>
         <QueryClientProvider client={client}>
-          <RouterProvider router={router} />
+          <RouterProvider router={router} useTransitions={false} />
         </QueryClientProvider>
       </AntApp>
     </StyleProvider>,

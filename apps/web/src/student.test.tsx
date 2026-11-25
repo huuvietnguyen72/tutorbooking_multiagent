@@ -6,6 +6,7 @@ import { mockControl, seedStudentBooking } from './mocks/studentHandlers';
 import { tutors } from './mocks/data';
 import { useCountdown } from './lib/useCountdown';
 import { renderApp } from './test/render';
+import { expectForbidden } from './test/navigation';
 
 // Short polling so the S-09 tests run in well under a second.
 vi.mock('./lib/polling', () => ({ RESULT_POLL_MS: 40, RESULT_POLL_MAX_MS: 1500 }));
@@ -21,6 +22,9 @@ async function loginAndGo(email: string, path: string) {
   await user.type(screen.getByLabelText('Mật khẩu'), 'mock-pass-1234');
   await user.click(mainButton('Đăng nhập'));
   await waitFor(() => expect(router.state.location.pathname).not.toBe('/dang-nhap'));
+  // Wait for the post-login render to commit before navigating again; otherwise the two
+  // navigations can batch and the guard's redirect is skipped.
+  await waitFor(() => expect(screen.queryByLabelText('Mật khẩu')).not.toBeInTheDocument());
   await router.navigate(path);
   return { user, router };
 }
@@ -42,21 +46,25 @@ describe('student routes access', () => {
 
   it('returns 403 for a tutor on every student page, including the gateway', async () => {
     const { router } = await loginAndGo('giasu-duyet@example.test', '/lich-cua-toi');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+    await expectForbidden(router);
     await router.navigate('/cong-thanh-toan-gia-lap/70000000-0000-4000-8000-000000000001');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+    await expectForbidden(router);
     await router.navigate('/dat-lich/20000000-0000-4000-8000-000000000001');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+    await expectForbidden(router);
   });
 
   it("shows 404, not someone else's data, for a booking the student does not own", async () => {
     const other = seedStudentBooking('u-someone-else', { startAt: Date.now() + 72 * HOUR });
     const { router } = await loginAndGo(STUDENT, `/lich-cua-toi/${other.id}`);
-    expect(await screen.findByText('404')).toBeInTheDocument();
+    // react-router 7 commits navigations in a transition, so the previous page's
+    // node can still be found for a moment after `navigate` resolves. Re-query each
+    // retry instead of holding a reference that the commit may detach.
+    const expect404 = () => waitFor(() => expect(screen.getByText('404')).toBeInTheDocument());
+    await expect404();
     await router.navigate(`/thanh-toan/${other.id}/ket-qua`);
-    expect(await screen.findByText('404')).toBeInTheDocument();
+    await expect404();
     await router.navigate(`/cong-thanh-toan-gia-lap/${other.payment.id}`);
-    expect(await screen.findByText('404')).toBeInTheDocument();
+    await expect404();
   });
 });
 

@@ -2,7 +2,7 @@ import { Button, Card, Checkbox, DatePicker, Select, Space, Table, Tag, Typograp
 import dayjs, { type Dayjs } from 'dayjs';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router';
 import { useAdminBookings, useAdminUsers } from '../../api/hooks';
 import type { Booking, BookingStatus } from '../../api/types';
 import { ROUTES } from '../../auth/routes';

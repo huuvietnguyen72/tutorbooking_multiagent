@@ -1,4 +1,4 @@
-import { createBrowserRouter, createMemoryRouter, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, createMemoryRouter, type RouteObject } from 'react-router';
 import type { TutorApprovalStatus } from './api/types';
 import { GuestOnly, RequireAuth, RequireTutorStatus } from './auth/guards';
 import { ROUTES } from './auth/routes';

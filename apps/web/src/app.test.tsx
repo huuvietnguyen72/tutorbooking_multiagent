@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { addDaysIso, startOfWeekIso } from './lib/time';
 import { server } from './mocks/server';
 import { renderApp } from './test/render';
+import { expectForbidden } from './test/navigation';
 
 /** Header and page both have "Đăng nhập"/"Đăng ký" buttons; page actions live in <main>. */
 const mainButton = (name: string) => within(screen.getByRole('main')).getByRole('button', { name });
@@ -28,8 +29,7 @@ describe('route guards', () => {
     await login(user, 'hocvien@example.test');
     await waitFor(() => expect(router.state.location.pathname).toBe('/gia-su'));
     await router.navigate('/admin');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
-    expect(await screen.findByText('Bạn không có quyền truy cập trang này.')).toBeInTheDocument();
+    await expectForbidden(router);
   });
 
   it('lets a student reach student pages and a tutor not', async () => {
@@ -39,7 +39,7 @@ describe('route guards', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/gia-su/trang-thai'));
     expect(await screen.findByText('Hồ sơ của bạn đang chờ quản trị viên duyệt.')).toBeInTheDocument();
     await router.navigate('/lich-cua-toi');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+    await expectForbidden(router);
   });
 });
 
