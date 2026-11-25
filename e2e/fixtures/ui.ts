@@ -32,6 +32,16 @@ export async function payAtGateway(page: Page, result: 'SUCCESS' | 'FAILURE'): P
   await page.waitForURL(/\/thanh-toan\/[0-9a-f-]{36}\/ket-qua/);
 }
 
+/**
+ * Open an antd Select month picker and choose a month by its visible label.
+ * Clicking the combobox input itself is unreliable: the selected-value span overlaps it and
+ * intercepts pointer events, so click the surrounding `.ant-select-selector` instead.
+ */
+export async function pickSelectMonth(page: Page, selectId: string, label: string): Promise<void> {
+  await page.locator(`.ant-select:has(#${selectId}) .ant-select-selector`).click();
+  await page.locator('.ant-select-dropdown:visible').getByText(label, { exact: true }).click();
+}
+
 /** The countdown on S-07 as seconds. */
 export async function holdSeconds(page: Page): Promise<number> {
   const text = (await page.getByTestId('hold-countdown').textContent()) ?? '';

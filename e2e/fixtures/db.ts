@@ -50,8 +50,27 @@ export class Db {
     }
   }
 
-  /** Move a paid lesson and its slot to `startAt`, keeping the duration (earnings are reported by the month the lesson ended in). */
+  /**
+   * Move a paid lesson and its slot to `startAt`, keeping the duration (earnings are reported by the month the lesson
+   * ended in). A failed earlier attempt can leave a slot in that month, so walk forward in 70-minute steps (longer
+   * than a lesson) until the interval is free instead of colliding with `slots_no_overlap`.
+   */
   async moveLesson(bookingId: string, startAt: Date): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        await this.tryMoveLesson(bookingId, new Date(startAt.getTime() + attempt * 70 * 60_000));
+        return;
+      } catch (error) {
+        // 23P01 = exclusion_violation: the target interval overlaps another slot of the same tutor.
+        if ((error as { code?: string } | null)?.code !== '23P01') throw error;
+        lastError = error;
+      }
+    }
+    throw lastError;
+  }
+
+  private async tryMoveLesson(bookingId: string, startAt: Date): Promise<void> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');

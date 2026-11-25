@@ -5,6 +5,7 @@ import { ACCOUNTS } from '../fixtures/env';
 import { Api } from '../fixtures/api';
 import { finishedLessonAt, lessonStartIn, monthLabel, statValue, sum, vnMonth, type EarningItems, type EarningsSummary } from '../fixtures/earnings';
 import { expect, test } from '../fixtures/test';
+import { pickSelectMonth } from '../fixtures/ui';
 
 const PAGE_SIZE = 10;
 const rows = (page: Page) => page.locator('.ant-table-tbody .ant-table-row');
@@ -12,8 +13,7 @@ const rows = (page: Page) => page.locator('.ant-table-tbody .ant-table-row');
 async function openMonth(page: Page, month: string): Promise<void> {
   await page.goto('/gia-su/thu-nhap');
   await expect(page.getByRole('heading', { name: 'Thu nhập', level: 3 })).toBeVisible();
-  await page.getByRole('combobox', { name: 'Chọn tháng' }).click();
-  await page.locator('.ant-select-dropdown:visible').getByText(`Tháng ${monthLabel(month)}`, { exact: true }).click();
+  await pickSelectMonth(page, 'earnings-month', `Tháng ${monthLabel(month)}`);
   await expect(page.getByRole('region', { name: `Tổng quan thu nhập tháng ${monthLabel(month)}` })).toBeVisible();
   await expect(page.getByRole('heading', { name: `Chi tiết tháng ${monthLabel(month)}` })).toBeVisible();
 }
@@ -22,6 +22,9 @@ const tutorIdOf = async (api: Api): Promise<string> =>
   (await api.get<{ items: { id: string; fullName: string }[] }>('/tutors')).items.find((x) => x.fullName === ACCOUNTS.tutor.fullName)!.id;
 
 test.describe('Báo cáo thu nhập gia sư', () => {
+  // Each case waits out the real per-minute request window before it starts.
+  test.describe.configure({ timeout: 240_000 });
+
   test('quyền truy cập: chưa đăng nhập 401, học viên 403, tháng tương lai 400', async ({ pageAs, student, tutor, admin }) => {
     const anonymous = await Api.anonymous();
     for (const path of ['/tutor/earnings', '/tutor/earnings/items']) {

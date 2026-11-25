@@ -2,7 +2,7 @@
 // Month -1 is used for the settle flow; nothing else settles it.
 import { ACCOUNTS } from '../fixtures/env';
 import { finishedLessonAt, lessonStartIn, monthLabel, vnMonth, type EarningItems, type EarningsSummary } from '../fixtures/earnings';
-import { vnd } from '../fixtures/ui';
+import { vnd, pickSelectMonth } from '../fixtures/ui';
 import { expect, test } from '../fixtures/test';
 
 interface AdminRow {
@@ -83,8 +83,7 @@ test.describe('Admin đối soát thu nhập gia sư', () => {
     expect(items.items.every((i) => i.settled)).toBe(true);
     const tutorPage = await pageAs('tutor');
     await tutorPage.goto('/gia-su/thu-nhap');
-    await tutorPage.getByRole('combobox', { name: 'Chọn tháng' }).click();
-    await tutorPage.locator('.ant-select-dropdown:visible').getByText(`Tháng ${monthLabel(month)}`, { exact: true }).click();
+    await pickSelectMonth(tutorPage, 'earnings-month', `Tháng ${monthLabel(month)}`);
     const settledCard = tutorPage.locator('.ant-statistic', { has: tutorPage.locator('.ant-statistic-title', { hasText: /^Đã đối soát$/ }) });
     await expect(settledCard).toContainText(vnd(mine.settledNetVnd));
     const openCard = tutorPage.locator('.ant-statistic', { has: tutorPage.locator('.ant-statistic-title', { hasText: /^Chưa đối soát$/ }) });
