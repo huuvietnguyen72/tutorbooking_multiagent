@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Descriptions, List, Rate, Skeleton, Space, Tooltip, Typography } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { useResumeCheckoutRedirect } from './useResumeCheckoutRedirect';
 import { usePublicConfig, useStudentBooking } from '../../api/hooks';
 import type { Booking, ReasonCode } from '../../api/types';

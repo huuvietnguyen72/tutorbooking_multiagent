@@ -1,6 +1,6 @@
 import { Card, Col, Row, Statistic, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useAdminStats } from '../../api/hooks';
 import { ROUTES } from '../../auth/routes';
 import { ErrorState } from '../../components/States';

@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Divider, List, Rate, Skeleton, Space, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { ApiError } from '../api/client';
 import { errorText } from '../api/errors';
 import { useMe, useTutor, useTutorReviews, useTutorSlots } from '../api/hooks';

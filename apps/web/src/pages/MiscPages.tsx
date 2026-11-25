@@ -1,6 +1,6 @@
 import { Alert, Button, Result, Space, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useMe, useMyProfile } from '../api/hooks';
 import { ROUTES } from '../auth/routes';
 import { StatusPage } from '../components/States';

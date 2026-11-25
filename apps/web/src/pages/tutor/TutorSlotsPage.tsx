@@ -2,7 +2,7 @@ import { LeftOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { Alert, Button, Card, Form, Input, Modal, Space, Tag, Typography, message } from 'antd';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ROUTES } from '../../auth/routes';
 import { errorText } from '../../api/errors';
 import {

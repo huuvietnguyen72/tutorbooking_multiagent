@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Descriptions, Modal, Skeleton, Space, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { errorText } from '../../api/errors';
 import { useStudentBooking, useStudentCancel } from '../../api/hooks';
 import { ROUTES } from '../../auth/routes';
@@ -42,6 +42,8 @@ export default function PaymentPage() {
   }
   // Anything but a live hold (paid, expired, cancelled) is shown by the result page, which reads the real state.
   const current = query.data;
+  // A release we just made also flips the status; its own navigation to the list must not lose to this redirect.
+  if (cancel.isSuccess) return null;
   if (current.status !== 'PENDING_PAYMENT') return <Navigate to={ROUTES.payResult(bookingId)} replace />;
 
   const release = () =>

@@ -1,6 +1,6 @@
 import { Spin } from 'antd';
 import type { ReactNode } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { useMe } from '../api/hooks';
 import type { TutorApprovalStatus, UserRole } from '../api/types';
 import { defaultHome, ROUTES } from './routes';

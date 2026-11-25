@@ -3,7 +3,7 @@ import calendarLabels from '../../components/calendar/vi.json';
 import { Button, Card, List, Segmented, Tabs, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useMyTeachingBookings } from '../../api/hooks';
 import type { TeachingScope, TutorBooking } from '../../api/types';
 import { ROUTES } from '../../auth/routes';

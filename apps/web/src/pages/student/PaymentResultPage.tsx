@@ -1,7 +1,7 @@
 import { Button, Result, Skeleton, Space, Spin } from 'antd';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { useMe, useStudentBooking } from '../../api/hooks';
 import { ROUTES } from '../../auth/routes';
 import { ErrorState, StatusPage } from '../../components/States';

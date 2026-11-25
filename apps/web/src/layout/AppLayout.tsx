@@ -1,7 +1,7 @@
 import { DownOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Button, Dropdown, Layout, Menu, Space, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useLogout, useMe } from '../api/hooks';
 import type { Me } from '../api/types';
 import { ROUTES } from '../auth/routes';

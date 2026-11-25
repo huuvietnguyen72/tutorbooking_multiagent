@@ -3,7 +3,7 @@ import { Alert, Button, Card, Descriptions, Form, Input, Modal, Skeleton, Toolti
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { z } from 'zod';
 import { ApiError } from '../../api/client';
 import { errorText } from '../../api/errors';

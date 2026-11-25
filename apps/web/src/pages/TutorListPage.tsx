@@ -2,7 +2,7 @@ import { FilterOutlined } from '@ant-design/icons';
 import { Button, Card, Col, Drawer, Grid, Input, Pagination, Row, Select, Typography } from 'antd';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { errorText } from '../api/errors';
 import { useTutors } from '../api/hooks';
 import type { TutorSearchParams, TutorSort } from '../api/types';

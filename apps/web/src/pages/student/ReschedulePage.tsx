@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Modal, Skeleton, Space, Typography, message } from 'antd';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../../api/client';
 import { errorText } from '../../api/errors';
 import { useReschedule, useStudentBooking, useTutorSlots } from '../../api/hooks';

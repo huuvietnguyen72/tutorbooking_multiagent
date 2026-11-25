@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Descriptions, Skeleton, Space, Typography } from 'antd';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../../api/client';
 import { errorText } from '../../api/errors';
 import { useCreateBooking, usePublicConfig, useSlot } from '../../api/hooks';

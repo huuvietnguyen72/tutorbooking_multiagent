@@ -1,7 +1,7 @@
 import { Button, Space, Tag } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import type { BookingStatus } from '../../api/types';
 import labels from './vi.json';
 import './calendar.css';

@@ -52,11 +52,15 @@ describe('student routes access', () => {
   it("shows 404, not someone else's data, for a booking the student does not own", async () => {
     const other = seedStudentBooking('u-someone-else', { startAt: Date.now() + 72 * HOUR });
     const { router } = await loginAndGo(STUDENT, `/lich-cua-toi/${other.id}`);
-    expect(await screen.findByText('404')).toBeInTheDocument();
+    // react-router 7 commits navigations in a transition, so the previous page's
+    // node can still be found for a moment after `navigate` resolves. Re-query each
+    // retry instead of holding a reference that the commit may detach.
+    const expect404 = () => waitFor(() => expect(screen.getByText('404')).toBeInTheDocument());
+    await expect404();
     await router.navigate(`/thanh-toan/${other.id}/ket-qua`);
-    expect(await screen.findByText('404')).toBeInTheDocument();
+    await expect404();
     await router.navigate(`/cong-thanh-toan-gia-lap/${other.payment.id}`);
-    expect(await screen.findByText('404')).toBeInTheDocument();
+    await expect404();
   });
 });
 
