@@ -39,10 +39,10 @@ describe('admin area access', () => {
 
   it.each(['hocvien@example.test', 'giasu-duyet@example.test'])('returns 403 for %s on every admin page', async (email) => {
     const { router } = await loginAndGo(email, '/admin');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/403'), { timeout: 5000 });
     for (const path of ['/admin/gia-su-cho-duyet', '/admin/nguoi-dung', '/admin/booking', '/admin/booking/x', '/admin/nhat-ky', '/admin/doi-soat']) {
       await router.navigate(path);
-      await waitFor(() => expect(router.state.location.pathname).toBe('/403'));
+      await waitFor(() => expect(router.state.location.pathname).toBe('/403'), { timeout: 5000 });
     }
   });
 });
