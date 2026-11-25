@@ -81,7 +81,7 @@ export default function AppLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Layout.Header style={{ display: 'flex', alignItems: 'center', gap: 16, paddingInline: 16 }}>
+      <Layout.Header className="app-header" style={{ display: 'flex', alignItems: 'center', gap: 16, paddingInline: 16 }}>
         <Link to={ROUTES.home} style={{ color: '#fff', fontWeight: 600, fontSize: 18, whiteSpace: 'nowrap' }}>
           ◉ {t('app.brand')}
         </Link>
@@ -117,12 +117,12 @@ export default function AppLayout() {
             </Button>
           </Dropdown>
         ) : (
-          <Space>
+          <Space size={8}>
             <Link to={ROUTES.login}>
               <Button ghost>{t('nav.login')}</Button>
             </Link>
             <Link to={ROUTES.register}>
-              <Button type="primary">{t('nav.register')}</Button>
+              <Button type="primary" className="btn-register">{t('nav.register')}</Button>
             </Link>
           </Space>
         )}
