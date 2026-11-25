@@ -2,3 +2,11 @@ body { margin: 0; }
 @media (max-width: 575px) {
   .hide-on-mobile { display: none; }
 }
+/* QUA-98: white on #0958d9 = 6:1 (AA); default #1677ff is only 4.1:1 */
+.btn-register.ant-btn-primary:not(:disabled) { background: #0958d9; }
+.btn-register.ant-btn-primary:not(:disabled):hover { background: #003eb3; }
+@media (max-width: 575px) {
+  .app-header { gap: 8px !important; padding-inline: 8px !important; }
+  .app-header .ant-btn { padding-inline: 8px; }
+  .app-header > a { font-size: 16px !important; }
+}
