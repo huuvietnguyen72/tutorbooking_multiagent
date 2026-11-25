@@ -8,6 +8,7 @@ module.exports = tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/coverage/**',
+      'apps/api/test/esm-deps-transform.js',
       'apps/web/dist/**',
     ],
   },
