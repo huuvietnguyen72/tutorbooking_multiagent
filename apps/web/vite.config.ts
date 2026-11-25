@@ -17,7 +17,7 @@ export default defineConfig({
     globals: false,
     setupFiles: ['./src/test/setup.ts'],
     // Resolve jest-dom against this test runner, including linked workspace installs.
-    server: { deps: { inline: ['@testing-library/jest-dom'] } },
+    server: { deps: { inline: ['@testing-library/jest-dom', /@ant-design\//] } },
     css: false,
     // Keep the antd/jsdom suites from competing for CPU on small CI runners.
     maxWorkers: 1,
