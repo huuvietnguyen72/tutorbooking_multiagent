@@ -7,7 +7,9 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY e2e/package.json ./e2e/package.json
-RUN npm ci
+RUN apk add --no-cache --virtual .build-deps python3 make g++ \
+    && npm ci \
+    && apk del .build-deps
 COPY apps/api ./apps/api
 RUN npm run build --workspace @tutor/api
 
@@ -21,7 +23,11 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY e2e/package.json ./e2e/package.json
-RUN npm ci --omit=dev && npm cache clean --force
+# argon2 compiles natively; build deps are removed in the same layer.
+RUN apk add --no-cache --virtual .build-deps python3 make g++ \
+    && npm ci --omit=dev \
+    && npm cache clean --force \
+    && apk del .build-deps
 COPY apps/api/prisma ./apps/api/prisma
 RUN cd apps/api && npx prisma generate
 COPY --from=build --chown=node:node /app/apps/api/dist ./apps/api/dist
