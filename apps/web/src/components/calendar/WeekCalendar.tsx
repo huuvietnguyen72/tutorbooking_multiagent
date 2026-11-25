@@ -34,9 +34,10 @@ const colors: Record<BookingStatus, string> = {
 };
 
 /** Native date arithmetic and Intl use the browser's timezone, including DST changes. */
-export default function WeekCalendar({ sessions, initialDate = new Date() }: {
+export default function WeekCalendar({ sessions, initialDate = new Date(), role }: {
   sessions: CalendarSession[];
   initialDate?: Date;
+  role: 'student' | 'tutor';
 }) {
   const { t, i18n } = useTranslation();
   const [start, setStart] = useState(() => monday(initialDate));
@@ -72,7 +73,7 @@ export default function WeekCalendar({ sessions, initialDate = new Date() }: {
                       <Link key={session.id} className={`week-event week-event-${session.status}`} to={session.href}>
                         <strong>{timeFormat.format(new Date(session.startAt))}–{timeFormat.format(new Date(session.endAt))}</strong>
                         <span>{session.title}</span>
-                        <Tag color={colors[session.status]}>{t(`tutorSessions.bookingStatus.${session.status}`)}</Tag>
+                        <Tag color={colors[session.status]}>{t(`${role === 'student' ? 'myBookings.status' : 'tutorSessions.bookingStatus'}.${session.status}`)}</Tag>
                       </Link>
                     ))}
                   </div>

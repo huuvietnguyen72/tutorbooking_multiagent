@@ -34,7 +34,7 @@ export default function BookingCalendar({ role }: { role: 'student' | 'tutor' })
   if (queries.some((q) => q.isPending)) return <Spin />;
   const byId = new Map<string, Booking | TutorBooking>();
   for (const q of queries) for (const booking of q.data ?? []) byId.set(booking.id, booking);
-  return <WeekCalendar sessions={[...byId.values()].map((booking) => ({
+  return <WeekCalendar role={role} sessions={[...byId.values()].map((booking) => ({
     ...booking,
     title: 'tutor' in booking ? booking.tutor.fullName : booking.student.fullName,
     href: role === 'student' ? ROUTES.booking(booking.id) : ROUTES.tutorSession(booking.id),
