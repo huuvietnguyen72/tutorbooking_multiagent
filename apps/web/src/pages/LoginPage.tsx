@@ -3,12 +3,12 @@ import { Alert, Button, Card, ConfigProvider, Form, Typography } from 'antd';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import './LoginPage.css';
 import { errorText } from '../api/errors';
 import { useLogin } from '../api/hooks';
-import { defaultHome, ROUTES } from '../auth/routes';
+import { ROUTES } from '../auth/routes';
 import { TextField } from '../components/FormFields';
 import { safeNext } from '../lib/safeNext';
 
@@ -37,7 +37,6 @@ const loginTheme = {
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = safeNext(params.get('next'));
   const login = useLogin();
@@ -49,11 +48,9 @@ export default function LoginPage() {
 
   const onSubmit = handleSubmit((values) => {
     setError(null);
+    // On success the session lands in the `me` cache and `GuestOnly` picks the destination
+    // (including `?next=`), so there is a single place that decides where to go.
     login.mutate(values, {
-      onSuccess: (me) => {
-        if (me.mustChangePassword) navigate(ROUTES.forcePassword, { replace: true });
-        else navigate(next ?? defaultHome(me), { replace: true });
-      },
       onError: (err) => setError(errorText(err)),
     });
   });

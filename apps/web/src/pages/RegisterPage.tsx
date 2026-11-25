@@ -3,14 +3,13 @@ import { Alert, Button, Card, Form, Radio, Typography } from 'antd';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router';
+import { Link } from 'react-router';
 import { z } from 'zod';
 import { ApiError } from '../api/client';
 import { errorText, fieldErrorText } from '../api/errors';
 import { useRegister } from '../api/hooks';
-import { defaultHome, ROUTES } from '../auth/routes';
+import { ROUTES } from '../auth/routes';
 import { TextField } from '../components/FormFields';
-import { safeNext } from '../lib/safeNext';
 
 const schema = z.object({
   role: z.enum(['STUDENT', 'TUTOR']),
@@ -22,9 +21,6 @@ type Values = z.infer<typeof schema>;
 
 export default function RegisterPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const next = safeNext(params.get('next'));
   const registerMutation = useRegister();
   const [error, setError] = useState<string | null>(null);
   const [serverFields, setServerFields] = useState<Partial<Record<keyof Values, string>>>({});
@@ -37,8 +33,9 @@ export default function RegisterPage() {
   const onSubmit = handleSubmit((values) => {
     setError(null);
     setServerFields({});
+    // Registration logs the new account in; `GuestOnly` decides where to land (honouring `?next=`
+    // for students) once `me` is cached.
     registerMutation.mutate(values, {
-      onSuccess: (me) => navigate(me.role === 'STUDENT' && next ? next : defaultHome(me), { replace: true }),
       onError: (err) => {
         if (err instanceof ApiError && err.code === 'EMAIL_TAKEN') {
           setServerFields({ email: t('errors.EMAIL_TAKEN') });

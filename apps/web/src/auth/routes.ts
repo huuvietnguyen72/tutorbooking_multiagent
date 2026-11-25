@@ -34,6 +34,17 @@ export const ROUTES = {
   adminEarnings: '/admin/doi-soat',
 } as const;
 
+/**
+ * Destination for a signed-in user who is still on the login/register screen.
+ * Guests arrive with `?next=` (already sanitised by `safeNext`); honour it unless the account must
+ * change its password. Registration only honours `next` for students — a tutor's home is the approval gate.
+ */
+export function postAuthHome(me: Me, next: string | null, via: 'login' | 'register'): string {
+  if (me.mustChangePassword) return ROUTES.forcePassword;
+  if (via === 'register' && me.role !== 'STUDENT') return defaultHome(me);
+  return next ?? defaultHome(me);
+}
+
 /** Where a user lands right after login (design §2.5). */
 export function defaultHome(me: Me): string {
   switch (me.role) {
