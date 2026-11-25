@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '20.18.1'
+          node-version: '20.19.5'
           cache: npm
       # Lockfile duy nhất ở root (npm workspaces) nên một lần audit bao phủ api + web.
       - name: npm audit (fail on high or critical)
