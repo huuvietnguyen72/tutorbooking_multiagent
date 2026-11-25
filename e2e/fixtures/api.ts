@@ -42,13 +42,13 @@ export class Api {
     return new Api(await request.newContext({ baseURL: WEB_BASE_URL, extraHTTPHeaders: { Origin: WEB_BASE_URL } }));
   }
 
-  async send<T>(method: 'get' | 'post' | 'patch' | 'delete', path: string, data?: unknown, headers?: Record<string, string>): Promise<{ status: number; body: T }> {
+  async send<T>(method: 'get' | 'post' | 'put' | 'patch' | 'delete', path: string, data?: unknown, headers?: Record<string, string>): Promise<{ status: number; body: T }> {
     const res = await this.ctx[method](`/api/v1${path}`, { data, headers });
     const text = await res.text();
     return { status: res.status(), body: (text ? JSON.parse(text) : null) as T };
   }
 
-  private async ok<T>(method: 'get' | 'post' | 'patch' | 'delete', path: string, data?: unknown, headers?: Record<string, string>): Promise<T> {
+  private async ok<T>(method: 'get' | 'post' | 'put' | 'patch' | 'delete', path: string, data?: unknown, headers?: Record<string, string>): Promise<T> {
     const res = await this.send<T>(method, path, data, headers);
     if (res.status >= 300) throw new Error(`${method.toUpperCase()} ${path} -> ${res.status} ${JSON.stringify(res.body)}`);
     return res.body;
