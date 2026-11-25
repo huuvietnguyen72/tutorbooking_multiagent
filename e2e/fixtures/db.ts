@@ -50,6 +50,28 @@ export class Db {
     }
   }
 
+  /** Move a paid lesson and its slot to `startAt`, keeping the duration (earnings are reported by the month the lesson ended in). */
+  async moveLesson(bookingId: string, startAt: Date): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const lesson = await client.query(
+        `SELECT slot_id, start_at, end_at FROM bookings WHERE id = $1 AND status = 'CONFIRMED' FOR UPDATE`, [bookingId],
+      );
+      if (lesson.rowCount !== 1) throw new Error(`moveLesson: ${bookingId} is not CONFIRMED`);
+      const { slot_id: slotId, start_at: from, end_at: to } = lesson.rows[0] as { slot_id: string; start_at: Date; end_at: Date };
+      const endAt = new Date(startAt.getTime() + (to.getTime() - from.getTime()));
+      await client.query(`UPDATE slots SET start_at = $2, end_at = $3 WHERE id = $1`, [slotId, startAt.toISOString(), endAt.toISOString()]);
+      await client.query(`UPDATE bookings SET start_at = $2, end_at = $3 WHERE id = $1`, [bookingId, startAt.toISOString(), endAt.toISOString()]);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async close(): Promise<void> {
     await this.pool.end();
   }
