@@ -60,7 +60,7 @@ tutor-booking/
 |---|---|---|---|
 | `db` | `postgres:16-alpine` | 5432 (tuỳ chọn) | Volume `pgdata`; healthcheck `pg_isready`. |
 | `mailpit` | `axllent/mailpit` | 8025 (UI), 1025 (SMTP) | Xem toàn bộ email demo. |
-| `api` | build `apps/api` (multi-stage, `node:20-alpine`) | — (chỉ qua `web`) | Lúc khởi động: `prisma migrate deploy` → seed (idempotent) → `node dist/main`. Chạy luôn job hết hạn và worker gửi mail. Volume `uploads` cho ảnh đại diện. |
+| `api` | build `apps/api` (multi-stage, `node:22-alpine`) | — (chỉ qua `web`) | Lúc khởi động: `prisma migrate deploy` → seed (idempotent) → `node dist/main`. Chạy luôn job hết hạn và worker gửi mail. Volume `uploads` cho ảnh đại diện. |
 | `web` | build `apps/web` → `nginx:alpine` | **8080** | Phục vụ SPA (kể cả trang cổng giả lập S-08); reverse proxy `/api/*` sang `api:3000`. Một origin → cookie đơn giản, không cần CORS. |
 
 Người chấm chỉ cần: `cp .env.example .env && docker compose up --build` → mở `http://localhost:8080` (app) và `http://localhost:8025` (email). Seed: 1 Admin (mật khẩu lấy từ `SEED_ADMIN_PASSWORD` trong `.env`, buộc đổi ở lần đăng nhập đầu). Khi `SEED_DEMO_DATA=true` (mặc định cho demo local) có thêm vài gia sư đã duyệt kèm slot và vài học viên; mật khẩu tài khoản demo không phải Admin ghi trong README. Phải tắt cờ này khi deploy public.
