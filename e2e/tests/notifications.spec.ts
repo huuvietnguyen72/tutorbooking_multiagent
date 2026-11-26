@@ -92,3 +92,19 @@ test('trung tâm thông báo: badge, nội dung/link, đánh dấu đọc 1 cái
   const stored = await student.get<NoticePage>('/notifications?pageSize=100');
   expect(stored.items.filter((n) => bookings.some((x) => x.id === n.bookingId)).every((n) => n.isRead)).toBe(true);
 });
+
+// QUA-152: at 375px the panel must sit fully inside the viewport (it used to start at x = -80).
+for (const role of ['student', 'tutor'] as const) {
+  test(`trung tâm thông báo: panel nằm gọn trong màn hình 375px (${role})`, async ({ pageAs }) => {
+    const page = await pageAs(role);
+    await page.setViewportSize({ width: 375, height: 740 });
+    await page.goto('/gia-su');
+    await bell(page).click();
+    const panel = page.locator('.ant-drawer-content, .ant-popover').first();
+    await expect(panel.getByText('Thông báo', { exact: true }).first()).toBeVisible();
+    const box = (await panel.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(375);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}

@@ -1,5 +1,5 @@
 import { BellOutlined } from '@ant-design/icons';
-import { App, Badge, Button, List, Popover, Skeleton, Typography } from 'antd';
+import { App, Badge, Button, Drawer, Grid, List, Popover, Skeleton, Typography } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -105,7 +105,7 @@ function NotificationPanel({ role, onNavigate }: { role: UserRole; onNavigate: (
     );
 
   return (
-    <div style={{ width: 'min(380px, calc(100vw - 32px))' }}>
+    <div style={{ width: 'min(380px, calc(100vw - 48px))', maxWidth: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <Typography.Text strong>{t('notifications.title')}</Typography.Text>
         <Button
@@ -126,27 +126,37 @@ export default function NotificationBell({ role }: { role: UserRole }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { data } = useUnreadCount();
+  const screens = Grid.useBreakpoint();
+  // Below 576px (antd `sm`) a popover anchored to the header bell overflows the left edge; use a drawer.
+  const compact = screens.sm === false;
   const count = data?.count ?? 0;
-  return (
-    <Popover
-      trigger="click"
-      placement="bottomRight"
-      open={open}
-      onOpenChange={setOpen}
-      destroyTooltipOnHide
-      content={<NotificationPanel role={role} onNavigate={() => setOpen(false)} />}
+  const panel = <NotificationPanel role={role} onNavigate={() => setOpen(false)} />;
+  const button = (
+    <Button
+      type="text"
+      style={{ color: '#fff' }}
+      aria-label={count > 0 ? t('notifications.bellUnread', { count }) : t('notifications.bell')}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      onClick={compact ? () => setOpen((v) => !v) : undefined}
     >
-      <Button
-        type="text"
-        style={{ color: '#fff' }}
-        aria-label={count > 0 ? t('notifications.bellUnread', { count }) : t('notifications.bell')}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        <Badge count={count} size="small" overflowCount={99}>
-          <BellOutlined style={{ color: '#fff', fontSize: 18 }} />
-        </Badge>
-      </Button>
+      <Badge count={count} size="small" overflowCount={99}>
+        <BellOutlined style={{ color: '#fff', fontSize: 18 }} />
+      </Badge>
+    </Button>
+  );
+  if (compact)
+    return (
+      <>
+        {button}
+        <Drawer placement="top" height="auto" open={open} onClose={() => setOpen(false)} title={null} destroyOnHidden>
+          {panel}
+        </Drawer>
+      </>
+    );
+  return (
+    <Popover trigger="click" placement="bottomRight" open={open} onOpenChange={setOpen} destroyTooltipOnHide content={panel}>
+      {button}
     </Popover>
   );
 }
