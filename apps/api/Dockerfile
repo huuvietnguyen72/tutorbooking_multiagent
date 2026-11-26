@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20.19.5-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 ENV NODE_ENV=development
 COPY package.json package-lock.json ./
@@ -13,7 +13,7 @@ RUN apk add --no-cache --virtual .build-deps python3 make g++ \
 COPY apps/api ./apps/api
 RUN npm run build --workspace @tutor/api
 
-FROM node:20.19.5-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     TZ=UTC \
